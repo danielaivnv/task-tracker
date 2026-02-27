@@ -1,0 +1,12 @@
+{
+  "name": "Focus Tasks",
+  "short_name": "Focus Tasks",
+  "id": "./",
+  "description": "Task tracker for daily focus and deadlines.",
+  "lang": "en-US",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f4ee",
+  "theme_color": "#1f43b9"
+}

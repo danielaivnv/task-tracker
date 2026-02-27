@@ -36,3 +36,4 @@ git push -u origin main
 
 - Data is stored in browser `localStorage`.
 - Tasks from old version (date-only) are migrated to deadline format automatically.
+- Optional true Web Push backend setup: see `BACKEND_SETUP.md`.

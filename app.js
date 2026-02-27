@@ -1,6 +1,12 @@
 const STORAGE_KEY = "focus-tasks-v2";
 const THEME_KEY = "focus-theme-v1";
 const TYPE_STORAGE_KEY = "focus-task-types-v1";
+const NOTIFICATION_KEY = "focus-notifications-v1";
+const NOTIFICATION_SW_FILE = "sw.js";
+const NOTIFICATION_POLL_MS = 30000;
+const BACKEND_DEVICE_KEY = "focus-device-id-v1";
+const BACKEND_SYNC_DEBOUNCE_MS = 1200;
+const BACKEND_CONFIG = loadBackendConfig();
 
 const TYPE_COLORS = ["#1F43B9", "#E85B0C", "#F1AD0A", "#2E8B57", "#EA7F82", "#5FA8C7"];
 const DEFAULT_TYPES = [
@@ -21,6 +27,11 @@ let tasks = loadTasks();
 let selectedTypeId = types[0] ? types[0].id : null;
 let selectedTypeColor = TYPE_COLORS[0];
 let activeFilter = "all";
+let notificationState = loadNotificationState();
+let notificationTimerId = null;
+let notificationPermissionPending = false;
+let serviceWorkerRegistration = null;
+let backendSyncTimerId = null;
 
 const page = document.body.dataset.page;
 const els = {
@@ -44,7 +55,9 @@ const els = {
   clearCompletedBtn: document.getElementById("clearCompletedBtn"),
   todayCount: document.getElementById("todayCount"),
   overdueCount: document.getElementById("overdueCount"),
-  upcomingCount: document.getElementById("upcomingCount")
+  upcomingCount: document.getElementById("upcomingCount"),
+  notifyToggleBtn: document.getElementById("notifyToggleBtn"),
+  notifyStatus: document.getElementById("notifyStatus")
 };
 
 setup();
@@ -52,6 +65,8 @@ setup();
 function setup() {
   initializeTheme();
   setTodayAsDefault();
+  initializeNotifications();
+  initializeBackendSync();
 
   if (page === "dashboard") {
     renderThemePicker();
@@ -133,6 +148,10 @@ function bindEvents() {
       saveTasks(tasks);
       renderTaskList(getFilteredTasks(tasks, "completed"));
     });
+  }
+
+  if (els.notifyToggleBtn) {
+    els.notifyToggleBtn.addEventListener("click", handleNotificationToggle);
   }
 }
 
@@ -412,6 +431,338 @@ function renderStats() {
   els.upcomingCount.textContent = getFilteredTasks(tasks, "upcoming").length;
 }
 
+function initializeNotifications() {
+  renderNotificationControls();
+
+  if (!isNotificationSupported()) {
+    return;
+  }
+
+  registerNotificationServiceWorker();
+  startNotificationPolling();
+
+  if (Notification.permission === "granted" && notificationState.enabled) {
+    ensureRemotePushSubscription();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      checkAndNotifyDueTasks();
+    }
+  });
+}
+
+function isNotificationSupported() {
+  return window.isSecureContext && "Notification" in window && "serviceWorker" in navigator;
+}
+
+async function handleNotificationToggle() {
+  if (!isNotificationSupported() || notificationPermissionPending) {
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    notificationState.enabled = !notificationState.enabled;
+    saveNotificationState(notificationState);
+    renderNotificationControls();
+    startNotificationPolling();
+
+    if (notificationState.enabled) {
+      await ensureRemotePushSubscription();
+      await sendLocalNotification(
+        "Alerts enabled",
+        "You will receive due-time reminders while the app is active.",
+        `${getAppRoot()}tasks.html`
+      );
+      checkAndNotifyDueTasks();
+    }
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    renderNotificationControls();
+    return;
+  }
+
+  notificationPermissionPending = true;
+  renderNotificationControls();
+  const permission = await Notification.requestPermission().catch(() => "default");
+  notificationPermissionPending = false;
+
+  if (permission === "granted") {
+    notificationState.enabled = true;
+    saveNotificationState(notificationState);
+    startNotificationPolling();
+    await ensureRemotePushSubscription();
+    await sendLocalNotification(
+      "Alerts enabled",
+      "You will receive due-time reminders while the app is active.",
+      `${getAppRoot()}tasks.html`
+    );
+    checkAndNotifyDueTasks();
+  }
+
+  renderNotificationControls();
+}
+
+function renderNotificationControls() {
+  if (!els.notifyToggleBtn || !els.notifyStatus) {
+    return;
+  }
+
+  if (!isNotificationSupported()) {
+    els.notifyToggleBtn.disabled = true;
+    els.notifyToggleBtn.textContent = "Alerts unavailable";
+    els.notifyStatus.textContent = "Notifications are not available in this browser mode.";
+    return;
+  }
+
+  if (notificationPermissionPending) {
+    els.notifyToggleBtn.disabled = true;
+    els.notifyToggleBtn.textContent = "Allowing...";
+    els.notifyStatus.textContent = "Approve the browser prompt to enable alerts.";
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    els.notifyToggleBtn.disabled = true;
+    els.notifyToggleBtn.textContent = "Alerts blocked";
+    els.notifyStatus.textContent = "Allow notifications in Safari settings, then reopen the app.";
+    return;
+  }
+
+  if (Notification.permission === "granted" && notificationState.enabled) {
+    els.notifyToggleBtn.disabled = false;
+    els.notifyToggleBtn.textContent = "Disable alerts";
+    els.notifyStatus.textContent = "Due task alerts are enabled.";
+    return;
+  }
+
+  els.notifyToggleBtn.disabled = false;
+  els.notifyToggleBtn.textContent = "Enable alerts";
+  els.notifyStatus.textContent =
+    Notification.permission === "granted"
+      ? "Tap to enable reminders for due tasks."
+      : "Tap to allow notifications for due tasks.";
+}
+
+async function registerNotificationServiceWorker() {
+  try {
+    const root = getAppRoot();
+    serviceWorkerRegistration = await navigator.serviceWorker.register(`${root}${NOTIFICATION_SW_FILE}`, {
+      scope: root
+    });
+  } catch {
+    try {
+      serviceWorkerRegistration = await navigator.serviceWorker.ready;
+    } catch {
+      serviceWorkerRegistration = null;
+    }
+  }
+}
+
+function startNotificationPolling() {
+  stopNotificationPolling();
+
+  if (!isNotificationSupported()) return;
+  if (Notification.permission !== "granted") return;
+  if (!notificationState.enabled) return;
+
+  checkAndNotifyDueTasks();
+  notificationTimerId = window.setInterval(checkAndNotifyDueTasks, NOTIFICATION_POLL_MS);
+}
+
+function stopNotificationPolling() {
+  if (notificationTimerId) {
+    window.clearInterval(notificationTimerId);
+    notificationTimerId = null;
+  }
+}
+
+async function checkAndNotifyDueTasks() {
+  if (!isNotificationSupported()) return;
+  if (Notification.permission !== "granted") return;
+  if (!notificationState.enabled) return;
+
+  const pending = tasks.filter((task) => !task.completed && task.dueAt && task.allDay === false);
+  const activeIds = new Set(pending.map((task) => task.id));
+  let changed = false;
+
+  Object.keys(notificationState.sentByTask).forEach((taskId) => {
+    if (!activeIds.has(taskId)) {
+      delete notificationState.sentByTask[taskId];
+      changed = true;
+    }
+  });
+
+  const now = Date.now();
+  let sentCount = 0;
+
+  for (const task of pending) {
+    if (sentCount >= 3) break;
+
+    const dueTs = toTimestamp(task.dueAt);
+    if (!dueTs || dueTs > now) continue;
+    if (notificationState.sentByTask[task.id] === task.dueAt) continue;
+
+    const minutesLate = Math.max(0, Math.floor((now - dueTs) / 60000));
+    const title = minutesLate <= 1 ? "Task due now" : "Task overdue";
+    const body = minutesLate <= 1 ? task.title : `${task.title} (${minutesLate} min late)`;
+    const sent = await sendLocalNotification(title, body, `${getAppRoot()}tasks.html`);
+
+    if (sent) {
+      notificationState.sentByTask[task.id] = task.dueAt;
+      changed = true;
+      sentCount += 1;
+    }
+  }
+
+  if (changed) {
+    saveNotificationState(notificationState);
+  }
+}
+
+async function sendLocalNotification(title, body, url) {
+  if (!isNotificationSupported()) return false;
+  if (Notification.permission !== "granted") return false;
+
+  try {
+    if (!serviceWorkerRegistration) {
+      serviceWorkerRegistration = await navigator.serviceWorker.ready;
+    }
+
+    if (serviceWorkerRegistration && typeof serviceWorkerRegistration.showNotification === "function") {
+      await serviceWorkerRegistration.showNotification(title, {
+        body,
+        tag: `focus-task-${Date.now()}`,
+        data: { url }
+      });
+      return true;
+    }
+
+    new Notification(title, { body, tag: `focus-task-${Date.now()}` });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function initializeBackendSync() {
+  if (!hasBackendSyncConfig()) return;
+
+  queueBackendTaskSync(200);
+  window.addEventListener("online", () => queueBackendTaskSync(400));
+}
+
+function hasBackendSyncConfig() {
+  return Boolean(BACKEND_CONFIG.url);
+}
+
+function hasBackendPushConfig() {
+  return Boolean(BACKEND_CONFIG.url && BACKEND_CONFIG.vapidPublicKey);
+}
+
+function queueBackendTaskSync(delay = BACKEND_SYNC_DEBOUNCE_MS) {
+  if (!hasBackendSyncConfig()) return;
+
+  if (backendSyncTimerId) {
+    window.clearTimeout(backendSyncTimerId);
+  }
+
+  backendSyncTimerId = window.setTimeout(() => {
+    backendSyncTimerId = null;
+    syncTasksToBackend();
+  }, delay);
+}
+
+async function syncTasksToBackend() {
+  if (!hasBackendSyncConfig()) return;
+  if (!navigator.onLine) return;
+
+  const payload = {
+    deviceId: getDeviceId(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    tasks: tasks.map(normalizeTaskForSync)
+  };
+
+  await postJson(`${BACKEND_CONFIG.url}/api/tasks/sync`, payload);
+}
+
+function normalizeTaskForSync(task) {
+  return {
+    id: task.id,
+    title: task.title,
+    dueAt: task.dueAt,
+    allDay: task.allDay !== false,
+    completed: Boolean(task.completed),
+    updatedAt: Date.now()
+  };
+}
+
+async function ensureRemotePushSubscription() {
+  if (!isNotificationSupported()) return;
+  if (!hasBackendPushConfig()) return;
+  if (Notification.permission !== "granted") return;
+
+  try {
+    if (!serviceWorkerRegistration) {
+      await registerNotificationServiceWorker();
+    }
+
+    const registration = serviceWorkerRegistration || (await navigator.serviceWorker.ready);
+    if (!registration || !registration.pushManager) return;
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(BACKEND_CONFIG.vapidPublicKey)
+      });
+    }
+
+    await postJson(`${BACKEND_CONFIG.url}/api/devices/register`, {
+      deviceId: getDeviceId(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+      subscription
+    });
+  } catch {
+    // Keep UI stable if push registration fails on unsupported Safari contexts.
+  }
+}
+
+function getDeviceId() {
+  let deviceId = localStorage.getItem(BACKEND_DEVICE_KEY);
+  if (deviceId) return deviceId;
+  deviceId = crypto.randomUUID();
+  localStorage.setItem(BACKEND_DEVICE_KEY, deviceId);
+  return deviceId;
+}
+
+async function postJson(url, payload) {
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch {
+    // Silent fallback: app should continue to work with localStorage-only mode.
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
 function getFilteredTasks(list, filter) {
   const now = Date.now();
 
@@ -633,6 +984,52 @@ function loadTasks() {
 
 function saveTasks(value) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  queueDueNotificationCheck();
+  queueBackendTaskSync();
+}
+
+function queueDueNotificationCheck() {
+  if (!notificationState.enabled) return;
+  window.setTimeout(checkAndNotifyDueTasks, 0);
+}
+
+function loadNotificationState() {
+  try {
+    const raw = localStorage.getItem(NOTIFICATION_KEY);
+    if (!raw) {
+      return { enabled: false, sentByTask: {} };
+    }
+
+    const parsed = JSON.parse(raw);
+    const enabled = Boolean(parsed && parsed.enabled);
+    const sentByTask =
+      parsed && parsed.sentByTask && typeof parsed.sentByTask === "object" ? parsed.sentByTask : {};
+
+    return { enabled, sentByTask };
+  } catch {
+    return { enabled: false, sentByTask: {} };
+  }
+}
+
+function saveNotificationState(value) {
+  localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(value));
+}
+
+function loadBackendConfig() {
+  const cfg = window.FOCUS_BACKEND_CONFIG || {};
+  const rawUrl = (cfg.url || window.FOCUS_BACKEND_URL || getMetaContent("focus-backend-url") || "").trim();
+  const url = rawUrl.replace(/\/+$/, "");
+  const vapidPublicKey = (
+    cfg.vapidPublicKey ||
+    window.FOCUS_VAPID_PUBLIC_KEY ||
+    getMetaContent("focus-vapid-public-key") ||
+    ""
+  ).trim();
+
+  return {
+    url,
+    vapidPublicKey
+  };
 }
 
 function initializeTheme() {
@@ -694,4 +1091,9 @@ function getAppRoot() {
   const parts = pathname.split("/").filter(Boolean);
   if (!parts.length) return "/";
   return `/${parts[0]}/`;
+}
+
+function getMetaContent(name) {
+  const node = document.querySelector(`meta[name="${name}"]`);
+  return node ? node.getAttribute("content") : "";
 }
