@@ -1,47 +1,47 @@
 :root {
-  --bg-1: #f4f8ff;
-  --bg-2: #fff8ef;
-  --shape-a: #d9e7ff;
-  --shape-b: #ffd99b;
-  --shape-c: #9dc2ff;
+  --bg-1: #f4f7ff;
+  --bg-2: #fff8f0;
+  --shape-a: #dfe9ff;
+  --shape-b: #ffdcb2;
+  --shape-c: #a8c3ff;
   --surface: rgba(255, 255, 255, 0.9);
-  --surface-soft: #f1f6ff;
-  --text: #142a52;
-  --muted: #607596;
-  --accent: #1f57d6;
-  --accent-soft: #e4edff;
-  --danger: #d9524e;
-  --border: #ccdaef;
+  --surface-soft: #f2f6ff;
+  --text: #1b315d;
+  --muted: #667b9d;
+  --accent: #3d6ce0;
+  --accent-soft: #e8eeff;
+  --danger: #d35f5f;
+  --border: #d3deef;
   --ok: #31a66a;
   --nav-bg: rgba(255, 255, 255, 0.92);
   --chip-bg: #ffffff;
   --task-bg: rgba(255, 255, 255, 0.95);
   --control-bg: #ffffff;
-  --danger-soft: #ffe8e3;
-  --shadow: 0 12px 30px rgba(32, 57, 102, 0.12);
+  --danger-soft: #ffeae6;
+  --shadow: 0 12px 30px rgba(43, 65, 106, 0.11);
 }
 
 body[data-theme="dark"] {
-  --bg-1: #0a1222;
-  --bg-2: #0f1a30;
-  --shape-a: #1a2f56;
-  --shape-b: #223f79;
-  --shape-c: #ff9f43;
-  --surface: rgba(17, 29, 50, 0.88);
-  --surface-soft: #142440;
-  --text: #e7efff;
-  --muted: #9cafcf;
-  --accent: #6ea1ff;
-  --accent-soft: #1e3158;
-  --danger: #ff8278;
-  --border: #2b436d;
-  --ok: #44bf85;
-  --nav-bg: rgba(11, 20, 36, 0.94);
-  --chip-bg: #142440;
-  --task-bg: rgba(18, 33, 58, 0.96);
-  --control-bg: #101d34;
-  --danger-soft: #3f242d;
-  --shadow: 0 14px 36px rgba(0, 0, 0, 0.42);
+  --bg-1: #0e1526;
+  --bg-2: #111d34;
+  --shape-a: #24395f;
+  --shape-b: #2d4f7e;
+  --shape-c: #f3a75a;
+  --surface: rgba(21, 33, 56, 0.9);
+  --surface-soft: #182949;
+  --text: #e8eefc;
+  --muted: #a4b4d3;
+  --accent: #7ea5ff;
+  --accent-soft: #233a64;
+  --danger: #ff8b80;
+  --border: #335079;
+  --ok: #4bc58e;
+  --nav-bg: rgba(13, 22, 38, 0.95);
+  --chip-bg: #192b4a;
+  --task-bg: rgba(22, 36, 60, 0.96);
+  --control-bg: #14243f;
+  --danger-soft: #442933;
+  --shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -190,7 +190,8 @@ body::after {
 }
 
 input[type="text"],
-input[type="datetime-local"] {
+input[type="date"],
+input[type="time"] {
   width: 100%;
   border: 1px solid var(--border);
   background: var(--surface-soft);
@@ -211,6 +212,38 @@ input:focus {
   grid-template-columns: 1fr;
   gap: 10px;
   margin-top: 10px;
+}
+
+.deadline-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deadline-mode-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 112px);
+  gap: 8px;
+  align-items: center;
+}
+
+.switch-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.switch-line input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+input[type="time"]:disabled {
+  opacity: 0.55;
 }
 
 .color-field {
@@ -270,11 +303,11 @@ input:focus {
   width: 100%;
   margin-top: 12px;
   color: #ffffff;
-  background: linear-gradient(135deg, var(--accent), #5f86ff);
+  background: linear-gradient(135deg, var(--accent), #6d8ce8);
 }
 
 body[data-theme="dark"] .primary-btn {
-  background: linear-gradient(135deg, var(--accent), #8fb6ff);
+  background: linear-gradient(135deg, var(--accent), #9bb8ff);
   color: #081225;
 }
 

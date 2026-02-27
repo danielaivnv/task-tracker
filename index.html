@@ -24,8 +24,17 @@
 
         <div class="row">
           <div class="field">
-            <label class="field-label" for="taskDeadline">Deadline</label>
-            <input id="taskDeadline" type="datetime-local" />
+            <label class="field-label" for="taskDate">Deadline</label>
+            <div class="deadline-controls">
+              <input id="taskDate" type="date" />
+              <div class="deadline-mode-row">
+                <label class="switch-line" for="allDayToggle">
+                  <input id="allDayToggle" type="checkbox" checked />
+                  <span>All day</span>
+                </label>
+                <input id="taskTime" type="time" disabled />
+              </div>
+            </div>
           </div>
           <div class="field color-field">
             <label class="field-label" for="taskColor">Color</label>

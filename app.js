@@ -1,11 +1,11 @@
 const STORAGE_KEY = "focus-tasks-v2";
 const THEME_KEY = "focus-theme-v1";
 const COLORS = [
-  { name: "Ocean", hex: "#2D52FF" },
-  { name: "Sunset", hex: "#FF7A3D" },
-  { name: "Sky", hex: "#55A9FF" },
-  { name: "Navy", hex: "#1A2E66" },
-  { name: "Amber", hex: "#F2B544" }
+  { name: "Azure", hex: "#3A6EF6" },
+  { name: "Sea", hex: "#3D93A3" },
+  { name: "Apricot", hex: "#EE9A53" },
+  { name: "Lavender", hex: "#8A78C9" },
+  { name: "Rosewood", hex: "#B56A6A" }
 ];
 const THEMES = [
   { id: "light", label: "Light" },
@@ -21,7 +21,9 @@ let tasks = loadTasks();
 const page = document.body.dataset.page;
 const els = {
   taskTitle: document.getElementById("taskTitle"),
-  taskDeadline: document.getElementById("taskDeadline"),
+  taskDate: document.getElementById("taskDate"),
+  taskTime: document.getElementById("taskTime"),
+  allDayToggle: document.getElementById("allDayToggle"),
   addTaskBtn: document.getElementById("addTaskBtn"),
   taskList: document.getElementById("taskList"),
   emptyState: document.getElementById("emptyState"),
@@ -77,6 +79,11 @@ function bindEvents() {
     });
   }
 
+  if (els.allDayToggle) {
+    els.allDayToggle.addEventListener("change", syncAllDayState);
+    syncAllDayState();
+  }
+
   els.filters.forEach((chip) => {
     chip.addEventListener("click", () => {
       activeFilter = chip.dataset.filter;
@@ -97,17 +104,27 @@ function bindEvents() {
 
 function addTask() {
   const title = els.taskTitle.value.trim();
-  const dueAt = normalizeDeadlineInput(els.taskDeadline.value);
+  const dateValue = els.taskDate ? els.taskDate.value : "";
+  const isAllDay = els.allDayToggle ? els.allDayToggle.checked : true;
+  const timeValue = els.taskTime ? els.taskTime.value : "";
 
   if (!title) {
     els.taskTitle.focus();
     return;
   }
 
+  if (!isAllDay && dateValue && !timeValue) {
+    els.taskTime.focus();
+    return;
+  }
+
+  const dueAt = buildDueAt(dateValue, timeValue, isAllDay);
+
   const newTask = {
     id: crypto.randomUUID(),
     title,
     dueAt,
+    allDay: isAllDay,
     color: selectedColor,
     completed: false,
     createdAt: Date.now()
@@ -118,7 +135,12 @@ function addTask() {
   saveTasks(tasks);
 
   els.taskTitle.value = "";
-  els.taskDeadline.value = "";
+  if (els.taskDate) els.taskDate.value = "";
+  if (els.taskTime) els.taskTime.value = "";
+  if (els.allDayToggle) {
+    els.allDayToggle.checked = true;
+    syncAllDayState();
+  }
 
   if (page === "dashboard") {
     renderStats();
@@ -321,29 +343,37 @@ function formatMeta(task) {
   const pretty = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
+    year: "numeric"
+  }).format(due);
+
+  const prettyTime = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit"
   }).format(due);
+  const showAllDay = task.allDay !== false;
 
   if (task.completed) {
-    return `Deadline ${pretty} · Completed`;
+    if (showAllDay) return `Deadline ${pretty} · All day · Completed`;
+    return `Deadline ${pretty}, ${prettyTime} · Completed`;
   }
 
   const now = Date.now();
   const dueTs = due.getTime();
 
   if (dueTs < now) {
-    return `Deadline ${pretty} · Overdue`;
+    if (showAllDay) return `Deadline ${pretty} · All day · Overdue`;
+    return `Deadline ${pretty}, ${prettyTime} · Overdue`;
   }
 
   if (isToday(task.dueAt)) {
+    if (showAllDay) return `Deadline ${pretty} · All day`;
     const mins = Math.max(0, Math.round((dueTs - now) / 60000));
     if (mins <= 1) return `Deadline ${pretty} · Due now`;
-    return `Deadline ${pretty} · In ${mins} min`;
+    return `Deadline ${pretty}, ${prettyTime} · In ${mins} min`;
   }
 
-  return `Deadline ${pretty}`;
+  if (showAllDay) return `Deadline ${pretty} · All day`;
+  return `Deadline ${pretty}, ${prettyTime}`;
 }
 
 function sortByDeadline(list) {
@@ -358,13 +388,6 @@ function sortByDeadline(list) {
 
     return (b.createdAt || 0) - (a.createdAt || 0);
   });
-}
-
-function normalizeDeadlineInput(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return value;
 }
 
 function toTimestamp(dueAt) {
@@ -386,6 +409,24 @@ function isToday(dueAt) {
   );
 }
 
+function buildDueAt(dateValue, timeValue, isAllDay) {
+  if (!dateValue) return null;
+
+  const dueAt = isAllDay ? `${dateValue}T23:59` : `${dateValue}T${timeValue}`;
+  const ts = new Date(dueAt).getTime();
+  return Number.isNaN(ts) ? null : dueAt;
+}
+
+function syncAllDayState() {
+  if (!els.allDayToggle || !els.taskTime) return;
+
+  const disabled = els.allDayToggle.checked;
+  els.taskTime.disabled = disabled;
+  if (disabled) {
+    els.taskTime.value = "";
+  }
+}
+
 function loadTasks() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("focus-tasks-v1");
@@ -396,19 +437,24 @@ function loadTasks() {
 
     const migrated = parsed.map((task) => {
       if (task.dueAt) {
-        return task;
+        return {
+          ...task,
+          allDay: typeof task.allDay === "boolean" ? task.allDay : task.dueAt.endsWith("23:59")
+        };
       }
 
       if (task.dueDate) {
         return {
           ...task,
-          dueAt: `${task.dueDate}T23:59`
+          dueAt: `${task.dueDate}T23:59`,
+          allDay: true
         };
       }
 
       return {
         ...task,
-        dueAt: null
+        dueAt: null,
+        allDay: true
       };
     });
 
