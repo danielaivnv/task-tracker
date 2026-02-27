@@ -2,11 +2,11 @@ const STORAGE_KEY = "focus-tasks-v2";
 const THEME_KEY = "focus-theme-v1";
 const TYPE_STORAGE_KEY = "focus-task-types-v1";
 
-const TYPE_COLORS = ["#3A6EF6", "#3D93A3", "#EE9A53", "#8A78C9", "#B56A6A", "#4BBA84"];
+const TYPE_COLORS = ["#1F43B9", "#E85B0C", "#F1AD0A", "#2E8B57", "#EA7F82", "#5FA8C7"];
 const DEFAULT_TYPES = [
-  { id: "type-personal", name: "Personal", color: "#3A6EF6" },
-  { id: "type-work", name: "Work", color: "#3D93A3" },
-  { id: "type-home", name: "Home", color: "#EE9A53" }
+  { id: "type-personal", name: "Personal", color: "#1F43B9" },
+  { id: "type-work", name: "Work", color: "#E85B0C" },
+  { id: "type-home", name: "Home", color: "#2E8B57" }
 ];
 const THEMES = [
   { id: "light", label: "Light" },

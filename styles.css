@@ -1,46 +1,46 @@
 :root {
-  --bg-1: #f4f7ff;
-  --bg-2: #fff8f0;
-  --shape-a: #dfe9ff;
-  --shape-b: #ffdcb2;
-  --shape-c: #a8c3ff;
+  --bg-1: #f7f4ee;
+  --bg-2: #fff9ef;
+  --shape-a: #ea7f82;
+  --shape-b: #f1ad0a;
+  --shape-c: #2e8b57;
   --surface: rgba(255, 255, 255, 0.92);
-  --surface-soft: #f2f6ff;
-  --text: #1b315d;
-  --muted: #667b9d;
-  --accent: #3d6ce0;
-  --accent-soft: #e8eeff;
-  --danger: #d35f5f;
-  --border: #d3deef;
+  --surface-soft: #f6f8fb;
+  --text: #1f2f5e;
+  --muted: #66718a;
+  --accent: #1f43b9;
+  --accent-soft: #e7edff;
+  --danger: #d95842;
+  --border: #d8deea;
   --ok: #31a66a;
   --nav-bg: rgba(255, 255, 255, 0.94);
   --chip-bg: #ffffff;
   --task-bg: rgba(255, 255, 255, 0.97);
   --control-bg: #ffffff;
-  --danger-soft: #ffeae6;
-  --shadow: 0 12px 30px rgba(43, 65, 106, 0.11);
+  --danger-soft: #ffe9e1;
+  --shadow: 0 12px 28px rgba(39, 54, 96, 0.11);
 }
 
 body[data-theme="dark"] {
-  --bg-1: #0e1526;
-  --bg-2: #111d34;
-  --shape-a: #24395f;
-  --shape-b: #2d4f7e;
-  --shape-c: #f3a75a;
-  --surface: rgba(21, 33, 56, 0.92);
-  --surface-soft: #182949;
-  --text: #e8eefc;
-  --muted: #a4b4d3;
-  --accent: #7ea5ff;
-  --accent-soft: #233a64;
-  --danger: #ff8b80;
-  --border: #335079;
-  --ok: #4bc58e;
-  --nav-bg: rgba(13, 22, 38, 0.96);
-  --chip-bg: #192b4a;
-  --task-bg: rgba(22, 36, 60, 0.98);
-  --control-bg: #14243f;
-  --danger-soft: #442933;
+  --bg-1: #0d1730;
+  --bg-2: #14213a;
+  --shape-a: #ea7f82;
+  --shape-b: #f1ad0a;
+  --shape-c: #5fa8c7;
+  --surface: rgba(23, 34, 59, 0.92);
+  --surface-soft: #1b2a48;
+  --text: #eaf0ff;
+  --muted: #a8b3c8;
+  --accent: #6e90ff;
+  --accent-soft: #273a69;
+  --danger: #ff8f73;
+  --border: #344c73;
+  --ok: #4fbe8d;
+  --nav-bg: rgba(16, 25, 43, 0.96);
+  --chip-bg: #1a2c4b;
+  --task-bg: rgba(23, 35, 58, 0.98);
+  --control-bg: #162540;
+  --danger-soft: #4a2a2b;
   --shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
 }
 
@@ -61,7 +61,10 @@ body {
   position: relative;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
-  background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
+  background:
+    radial-gradient(circle at 85% 12%, color-mix(in srgb, var(--shape-a) 20%, transparent) 0 20%, transparent 21%),
+    radial-gradient(circle at 15% 78%, color-mix(in srgb, var(--shape-b) 22%, transparent) 0 18%, transparent 19%),
+    linear-gradient(160deg, var(--bg-1), var(--bg-2));
   padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 92px);
 }
 
@@ -71,25 +74,25 @@ body::after {
   position: fixed;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.24;
+  opacity: 0.2;
 }
 
 body::before {
-  width: 270px;
-  height: 270px;
-  top: -95px;
-  right: -85px;
+  width: 250px;
+  height: 250px;
+  top: -90px;
+  right: -75px;
   background: var(--shape-a);
-  border-radius: 44% 56% 62% 38% / 45% 40% 60% 55%;
+  border-radius: 40% 60% 58% 42% / 45% 36% 64% 55%;
 }
 
 body::after {
-  width: 220px;
-  height: 220px;
-  bottom: 86px;
-  left: -80px;
+  width: 210px;
+  height: 210px;
+  bottom: 90px;
+  left: -70px;
   background: var(--shape-b);
-  border-radius: 60% 40% 43% 57% / 54% 46% 54% 46%;
+  border-radius: 62% 38% 47% 53% / 58% 42% 58% 42%;
 }
 
 .app-shell,
@@ -103,6 +106,21 @@ body::after {
   margin: 0 auto;
 }
 
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.16;
+  background-image:
+    radial-gradient(circle at 18px 18px, var(--shape-c) 0 4px, transparent 5px),
+    linear-gradient(135deg, transparent 0 46%, var(--shape-a) 47% 53%, transparent 54%),
+    linear-gradient(45deg, transparent 0 46%, var(--shape-b) 47% 53%, transparent 54%);
+  background-size: 80px 80px, 140px 140px, 160px 160px;
+  background-position: 0 0, 20px 40px, 90px 10px;
+}
+
 .topbar {
   position: relative;
 }
@@ -110,13 +128,13 @@ body::after {
 .topbar::after {
   content: "";
   position: absolute;
-  right: 6px;
-  top: 42px;
-  width: 52px;
-  height: 16px;
+  right: 8px;
+  top: 40px;
+  width: 56px;
+  height: 18px;
   background: var(--shape-c);
-  border-radius: 999px;
-  opacity: 0.6;
+  border-radius: 28px 28px 10px 10px;
+  opacity: 0.75;
 }
 
 .topbar h1 {
