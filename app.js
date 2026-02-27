@@ -29,7 +29,7 @@ const els = {
   taskTime: document.getElementById("taskTime"),
   allDayToggle: document.getElementById("allDayToggle"),
   noDeadlineToggle: document.getElementById("noDeadlineToggle"),
-  typeSelector: document.getElementById("typeSelector"),
+  taskTypeSelect: document.getElementById("taskTypeSelect"),
   typeBuilder: document.getElementById("typeBuilder"),
   newTypeName: document.getElementById("newTypeName"),
   typeColorPicker: document.getElementById("typeColorPicker"),
@@ -55,7 +55,7 @@ function setup() {
 
   if (page === "dashboard") {
     renderThemePicker();
-    renderTypeSelector();
+    renderTaskTypeSelect();
     renderTypeColorPicker();
     renderTypeList();
   }
@@ -97,6 +97,12 @@ function bindEvents() {
         event.preventDefault();
         addType();
       }
+    });
+  }
+
+  if (els.taskTypeSelect) {
+    els.taskTypeSelect.addEventListener("change", () => {
+      selectedTypeId = els.taskTypeSelect.value;
     });
   }
 
@@ -202,7 +208,7 @@ function addType() {
   selectedTypeId = newType.id;
 
   els.newTypeName.value = "";
-  renderTypeSelector();
+  renderTaskTypeSelect();
   renderTypeList();
 }
 
@@ -228,13 +234,13 @@ function deleteType(typeId) {
     selectedTypeId = fallbackType.id;
   }
 
-  renderTypeSelector();
+  renderTaskTypeSelect();
   renderTypeList();
   rerenderCurrentPage();
 }
 
-function renderTypeSelector() {
-  if (!els.typeSelector) return;
+function renderTaskTypeSelect() {
+  if (!els.taskTypeSelect) return;
 
   if (!types.length) {
     types = [...DEFAULT_TYPES];
@@ -245,11 +251,14 @@ function renderTypeSelector() {
     selectedTypeId = types[0].id;
   }
 
-  els.typeSelector.innerHTML = "";
+  els.taskTypeSelect.innerHTML = "";
 
   types.forEach((type) => {
-    const chip = createTypeChip(type, true);
-    els.typeSelector.appendChild(chip);
+    const option = document.createElement("option");
+    option.value = type.id;
+    option.textContent = type.name;
+    if (type.id === selectedTypeId) option.selected = true;
+    els.taskTypeSelect.appendChild(option);
   });
 }
 
@@ -288,57 +297,32 @@ function renderTypeList() {
 
   els.typeList.innerHTML = "";
   types.forEach((type) => {
-    const pill = createTypeChip(type, false);
-    els.typeList.appendChild(pill);
+    const row = document.createElement("div");
+    row.className = "type-list-row";
+
+    const left = document.createElement("div");
+    left.className = "type-list-left";
+
+    const dot = document.createElement("span");
+    dot.className = "type-pill-dot";
+    dot.style.background = type.color;
+
+    const name = document.createElement("span");
+    name.textContent = type.name;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "type-pill-delete";
+    del.textContent = "Delete";
+    del.disabled = types.length <= 1;
+    del.addEventListener("click", () => deleteType(type.id));
+
+    left.appendChild(dot);
+    left.appendChild(name);
+    row.appendChild(left);
+    row.appendChild(del);
+    els.typeList.appendChild(row);
   });
-}
-
-function createTypeChip(type, isSelectable) {
-  const pill = document.createElement("div");
-  pill.className = "type-pill";
-
-  if (selectedTypeId === type.id) {
-    pill.classList.add("active");
-  }
-
-  const dot = document.createElement("span");
-  dot.className = "type-pill-dot";
-  dot.style.background = type.color;
-
-  const name = document.createElement("span");
-  name.textContent = type.name;
-
-  const del = document.createElement("button");
-  del.type = "button";
-  del.className = "type-pill-delete";
-  del.textContent = "x";
-  del.setAttribute("aria-label", `Delete type ${type.name}`);
-  del.disabled = types.length <= 1;
-  del.addEventListener("click", (event) => {
-    event.stopPropagation();
-    deleteType(type.id);
-  });
-
-  if (isSelectable) {
-    pill.setAttribute("role", "button");
-    pill.setAttribute("tabindex", "0");
-    pill.addEventListener("click", () => {
-      selectedTypeId = type.id;
-      renderTypeSelector();
-    });
-    pill.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        selectedTypeId = type.id;
-        renderTypeSelector();
-      }
-    });
-  }
-
-  pill.appendChild(dot);
-  pill.appendChild(name);
-  pill.appendChild(del);
-  return pill;
 }
 
 function renderThemePicker() {
