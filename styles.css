@@ -275,6 +275,12 @@ select:focus {
   width: 100%;
 }
 
+.deadline-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .switch-line {
   display: inline-flex;
   align-items: center;

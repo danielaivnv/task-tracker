@@ -30,7 +30,10 @@ const els = {
   taskDate: document.getElementById("taskDate"),
   taskTime: document.getElementById("taskTime"),
   allDayToggle: document.getElementById("allDayToggle"),
-  taskTypeSelect: document.getElementById("taskTypeSelect"),
+  noDeadlineToggle: document.getElementById("noDeadlineToggle"),
+  typeSelector: document.getElementById("typeSelector"),
+  toggleTypeBuilderBtn: document.getElementById("toggleTypeBuilderBtn"),
+  typeBuilder: document.getElementById("typeBuilder"),
   newTypeName: document.getElementById("newTypeName"),
   typeColorPicker: document.getElementById("typeColorPicker"),
   addTypeBtn: document.getElementById("addTypeBtn"),
@@ -51,10 +54,11 @@ setup();
 
 function setup() {
   initializeTheme();
+  setTodayAsDefault();
 
   if (page === "dashboard") {
     renderThemePicker();
-    renderTaskTypeSelect();
+    renderTypeSelector();
     renderTypeColorPicker();
     renderTypeList();
   }
@@ -86,12 +90,6 @@ function bindEvents() {
     });
   }
 
-  if (els.taskTypeSelect) {
-    els.taskTypeSelect.addEventListener("change", () => {
-      selectedTypeId = els.taskTypeSelect.value;
-    });
-  }
-
   if (els.addTypeBtn) {
     els.addTypeBtn.addEventListener("click", addType);
   }
@@ -105,9 +103,24 @@ function bindEvents() {
     });
   }
 
+  if (els.toggleTypeBuilderBtn && els.typeBuilder) {
+    els.toggleTypeBuilderBtn.addEventListener("click", () => {
+      els.typeBuilder.classList.toggle("hidden");
+      const opened = !els.typeBuilder.classList.contains("hidden");
+      els.toggleTypeBuilderBtn.textContent = opened ? "Hide type editor" : "+ New type";
+    });
+  }
+
   if (els.allDayToggle) {
-    els.allDayToggle.addEventListener("change", syncAllDayState);
-    syncAllDayState();
+    els.allDayToggle.addEventListener("change", syncDeadlineState);
+  }
+
+  if (els.noDeadlineToggle) {
+    els.noDeadlineToggle.addEventListener("change", syncDeadlineState);
+  }
+
+  if (els.allDayToggle || els.noDeadlineToggle) {
+    syncDeadlineState();
   }
 
   els.filters.forEach((chip) => {
@@ -129,30 +142,31 @@ function bindEvents() {
 }
 
 function addTask() {
-  const title = els.taskTitle.value.trim();
+  const title = els.taskTitle ? els.taskTitle.value.trim() : "";
   const dateValue = els.taskDate ? els.taskDate.value : "";
   const isAllDay = els.allDayToggle ? els.allDayToggle.checked : true;
+  const noDeadline = els.noDeadlineToggle ? els.noDeadlineToggle.checked : false;
   const timeValue = els.taskTime ? els.taskTime.value : "";
-  const typeId = els.taskTypeSelect ? els.taskTypeSelect.value : selectedTypeId;
+  const typeId = selectedTypeId;
 
   if (!title) {
     els.taskTitle.focus();
     return;
   }
 
-  if (!isAllDay && dateValue && !timeValue) {
+  if (!noDeadline && !isAllDay && dateValue && !timeValue) {
     els.taskTime.focus();
     return;
   }
 
-  const dueAt = buildDueAt(dateValue, timeValue, isAllDay);
+  const dueAt = noDeadline ? null : buildDueAt(dateValue, timeValue, isAllDay);
   const color = getTypeColor(typeId);
 
   const newTask = {
     id: crypto.randomUUID(),
     title,
     dueAt,
-    allDay: isAllDay,
+    allDay: noDeadline ? true : isAllDay,
     typeId,
     color,
     completed: false,
@@ -163,13 +177,12 @@ function addTask() {
   tasks = sortByDeadline(tasks);
   saveTasks(tasks);
 
-  els.taskTitle.value = "";
-  if (els.taskDate) els.taskDate.value = "";
+  if (els.taskTitle) els.taskTitle.value = "";
+  if (els.taskDate) els.taskDate.value = getTodayDateString();
   if (els.taskTime) els.taskTime.value = "";
-  if (els.allDayToggle) {
-    els.allDayToggle.checked = true;
-    syncAllDayState();
-  }
+  if (els.allDayToggle) els.allDayToggle.checked = true;
+  if (els.noDeadlineToggle) els.noDeadlineToggle.checked = false;
+  syncDeadlineState();
 
   if (page === "dashboard") {
     renderStats();
@@ -187,9 +200,7 @@ function addType() {
   }
 
   const exists = types.some((type) => type.name.toLowerCase() === name.toLowerCase());
-  if (exists) {
-    return;
-  }
+  if (exists) return;
 
   const newType = {
     id: `type-${crypto.randomUUID()}`,
@@ -202,7 +213,7 @@ function addType() {
   selectedTypeId = newType.id;
 
   els.newTypeName.value = "";
-  renderTaskTypeSelect();
+  renderTypeSelector();
   renderTypeList();
 }
 
@@ -214,7 +225,6 @@ function deleteType(typeId) {
 
   tasks = tasks.map((task) => {
     if (task.typeId !== typeId) return task;
-
     return {
       ...task,
       typeId: fallbackType.id,
@@ -229,13 +239,13 @@ function deleteType(typeId) {
     selectedTypeId = fallbackType.id;
   }
 
-  renderTaskTypeSelect();
+  renderTypeSelector();
   renderTypeList();
   rerenderCurrentPage();
 }
 
-function renderTaskTypeSelect() {
-  if (!els.taskTypeSelect) return;
+function renderTypeSelector() {
+  if (!els.typeSelector) return;
 
   if (!types.length) {
     types = [...DEFAULT_TYPES];
@@ -246,14 +256,11 @@ function renderTaskTypeSelect() {
     selectedTypeId = types[0].id;
   }
 
-  els.taskTypeSelect.innerHTML = "";
+  els.typeSelector.innerHTML = "";
 
   types.forEach((type) => {
-    const option = document.createElement("option");
-    option.value = type.id;
-    option.textContent = type.name;
-    if (type.id === selectedTypeId) option.selected = true;
-    els.taskTypeSelect.appendChild(option);
+    const chip = createTypeChip(type, true);
+    els.typeSelector.appendChild(chip);
   });
 }
 
@@ -291,30 +298,58 @@ function renderTypeList() {
   if (!els.typeList) return;
 
   els.typeList.innerHTML = "";
-
   types.forEach((type) => {
-    const pill = document.createElement("div");
-    pill.className = "type-pill";
-
-    const dot = document.createElement("span");
-    dot.className = "type-pill-dot";
-    dot.style.background = type.color;
-
-    const name = document.createElement("span");
-    name.textContent = type.name;
-
-    const del = document.createElement("button");
-    del.type = "button";
-    del.textContent = "x";
-    del.setAttribute("aria-label", `Delete type ${type.name}`);
-    del.disabled = types.length <= 1;
-    del.addEventListener("click", () => deleteType(type.id));
-
-    pill.appendChild(dot);
-    pill.appendChild(name);
-    pill.appendChild(del);
+    const pill = createTypeChip(type, false);
     els.typeList.appendChild(pill);
   });
+}
+
+function createTypeChip(type, isSelectable) {
+  const pill = document.createElement("div");
+  pill.className = "type-pill";
+
+  if (selectedTypeId === type.id) {
+    pill.classList.add("active");
+  }
+
+  const dot = document.createElement("span");
+  dot.className = "type-pill-dot";
+  dot.style.background = type.color;
+
+  const name = document.createElement("span");
+  name.textContent = type.name;
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "type-pill-delete";
+  del.textContent = "x";
+  del.setAttribute("aria-label", `Delete type ${type.name}`);
+  del.disabled = types.length <= 1;
+  del.addEventListener("click", (event) => {
+    event.stopPropagation();
+    deleteType(type.id);
+  });
+
+  if (isSelectable) {
+    pill.setAttribute("role", "button");
+    pill.setAttribute("tabindex", "0");
+    pill.addEventListener("click", () => {
+      selectedTypeId = type.id;
+      renderTypeSelector();
+    });
+    pill.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectedTypeId = type.id;
+        renderTypeSelector();
+      }
+    });
+  }
+
+  pill.appendChild(dot);
+  pill.appendChild(name);
+  pill.appendChild(del);
+  return pill;
 }
 
 function renderThemePicker() {
@@ -421,7 +456,6 @@ function getFilteredTasks(list, filter) {
       if (filter === "today") return isToday(task.dueAt);
       if (filter === "upcoming") return dueTs && dueTs > now && !isToday(task.dueAt);
       if (filter === "overdue") return dueTs && dueTs < now;
-
       return true;
     })
   );
@@ -484,10 +518,7 @@ function getTypeColor(typeId) {
 }
 
 function getTaskColor(task) {
-  if (task.typeId) {
-    return getTypeColor(task.typeId);
-  }
-
+  if (task.typeId) return getTypeColor(task.typeId);
   return task.color || TYPE_COLORS[0];
 }
 
@@ -507,7 +538,6 @@ function sortByDeadline(list) {
 
 function buildDueAt(dateValue, timeValue, isAllDay) {
   if (!dateValue) return null;
-
   const raw = isAllDay ? `${dateValue}T23:59` : `${dateValue}T${timeValue}`;
   const ts = new Date(raw).getTime();
   return Number.isNaN(ts) ? null : raw;
@@ -521,7 +551,6 @@ function toTimestamp(dueAt) {
 
 function isToday(dueAt) {
   if (!dueAt) return false;
-
   const date = new Date(dueAt);
   if (Number.isNaN(date.getTime())) return false;
 
@@ -533,13 +562,24 @@ function isToday(dueAt) {
   );
 }
 
-function syncAllDayState() {
-  if (!els.allDayToggle || !els.taskTime) return;
+function syncDeadlineState() {
+  const noDeadline = els.noDeadlineToggle ? els.noDeadlineToggle.checked : false;
+  const isAllDay = els.allDayToggle ? els.allDayToggle.checked : true;
 
-  const isAllDay = els.allDayToggle.checked;
-  els.taskTime.disabled = isAllDay;
-  els.taskTime.classList.toggle("hidden", isAllDay);
-  if (isAllDay) {
+  if (els.taskDate) {
+    els.taskDate.disabled = noDeadline;
+  }
+
+  if (els.allDayToggle) {
+    els.allDayToggle.disabled = noDeadline;
+  }
+
+  if (!els.taskTime) return;
+
+  const hideTime = noDeadline || isAllDay;
+  els.taskTime.disabled = hideTime;
+  els.taskTime.classList.toggle("hidden", hideTime);
+  if (hideTime) {
     els.taskTime.value = "";
   }
 }
@@ -548,6 +588,7 @@ function loadTypes() {
   try {
     const raw = localStorage.getItem(TYPE_STORAGE_KEY);
     const backupRaw = localStorage.getItem(TYPE_BACKUP_KEY);
+
     if (!raw) {
       if (backupRaw) {
         const backupParsed = JSON.parse(backupRaw);
@@ -556,6 +597,7 @@ function loadTypes() {
           return backupParsed;
         }
       }
+
       const defaults = [...DEFAULT_TYPES];
       saveTypes(defaults);
       return defaults;
@@ -626,6 +668,7 @@ function loadTasks() {
 
     const sorted = sortByDeadline(migrated);
     saveTasks(sorted);
+
     if (!sorted.length && backupRaw) {
       const backupParsed = JSON.parse(backupRaw);
       if (Array.isArray(backupParsed) && backupParsed.length) {
@@ -634,6 +677,7 @@ function loadTasks() {
         return repaired;
       }
     }
+
     return sorted;
   } catch {
     try {
@@ -668,13 +712,25 @@ function saveTheme(themeId) {
   localStorage.setItem(THEME_KEY, themeId);
 }
 
+function setTodayAsDefault() {
+  if (!els.taskDate) return;
+  if (!els.taskDate.value) {
+    els.taskDate.value = getTodayDateString();
+  }
+}
+
+function getTodayDateString() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function normalizeStandalonePath() {
   const { hostname, pathname, search, hash } = window.location;
-
-  // GitHub Pages project route without trailing slash can break relative links.
   if (!hostname.endsWith("github.io")) return;
   if (pathname.endsWith("/") || pathname.endsWith(".html")) return;
-
   window.location.replace(`${pathname}/${search}${hash}`);
 }
 
@@ -683,7 +739,6 @@ function fixBottomNavLinks() {
   if (!links.length) return;
 
   const root = getAppRoot();
-
   links.forEach((link) => {
     const href = link.getAttribute("href");
     if (!href || href.startsWith("http")) return;
@@ -695,11 +750,9 @@ function fixBottomNavLinks() {
 
 function getAppRoot() {
   const { hostname, pathname } = window.location;
-
   if (!hostname.endsWith("github.io")) return "/";
 
   const parts = pathname.split("/").filter(Boolean);
   if (!parts.length) return "/";
-
   return `/${parts[0]}/`;
 }

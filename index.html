@@ -28,10 +28,16 @@
             <div class="deadline-controls">
               <input id="taskDate" type="date" />
               <div class="deadline-mode-row">
-                <label class="switch-line" for="allDayToggle">
-                  <input id="allDayToggle" type="checkbox" checked />
-                  <span>All day</span>
-                </label>
+                <div class="deadline-switches">
+                  <label class="switch-line" for="allDayToggle">
+                    <input id="allDayToggle" type="checkbox" checked />
+                    <span>All day</span>
+                  </label>
+                  <label class="switch-line" for="noDeadlineToggle">
+                    <input id="noDeadlineToggle" type="checkbox" />
+                    <span>No deadline</span>
+                  </label>
+                </div>
                 <input id="taskTime" class="time-input" type="time" disabled />
               </div>
             </div>
