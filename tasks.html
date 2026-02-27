@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Focus Tasks - Tasks</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="tasks">
+    <main class="app-shell">
+      <header class="topbar">
+        <p class="eyebrow">Task list</p>
+        <h1>All Tasks</h1>
+        <p class="subtitle">Track deadlines and finish on schedule.</p>
+      </header>
+
+      <nav class="filters" aria-label="Task filters">
+        <button class="filter-chip active" data-filter="all" type="button">All active</button>
+        <button class="filter-chip" data-filter="today" type="button">Today</button>
+        <button class="filter-chip" data-filter="upcoming" type="button">Upcoming</button>
+        <button class="filter-chip" data-filter="overdue" type="button">Overdue</button>
+      </nav>
+
+      <section class="card list-wrap" aria-live="polite">
+        <div id="taskList" class="task-list"></div>
+        <p id="emptyState" class="empty-state">No tasks in this section.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main">
+      <a class="nav-link" href="index.html">Dashboard</a>
+      <a class="nav-link active" href="tasks.html">Tasks</a>
+      <a class="nav-link" href="completed.html">Completed</a>
+    </nav>
+
+    <template id="taskItemTemplate">
+      <article class="task-item">
+        <div class="task-main">
+          <button class="check-btn" type="button" aria-label="Mark completed"></button>
+          <div class="task-copy">
+            <p class="task-title"></p>
+            <p class="task-meta"></p>
+          </div>
+        </div>
+        <button class="delete-btn" type="button" aria-label="Delete task">Delete</button>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Focus Tasks - Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="dashboard">
+    <main class="app-shell">
+      <header class="topbar">
+        <p class="eyebrow">Task tracker</p>
+        <h1>Focus Tasks</h1>
+        <p class="subtitle">Plan clearly. Finish on time.</p>
+      </header>
+
+      <section class="card composer" aria-label="Add new task">
+        <h2>Quick Add</h2>
+        <label class="field-label" for="taskTitle">Task</label>
+        <input id="taskTitle" type="text" maxlength="90" placeholder="Add a task..." autocomplete="off" />
+
+        <div class="row">
+          <div class="field">
+            <label class="field-label" for="taskDeadline">Deadline</label>
+            <input id="taskDeadline" type="datetime-local" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="taskColor">Color</label>
+            <div class="color-picker" id="taskColor" role="radiogroup" aria-label="Task color"></div>
+          </div>
+        </div>
+
+        <button id="addTaskBtn" class="primary-btn" type="button">Add task</button>
+      </section>
+
+      <section class="stats-grid" aria-label="Task summary">
+        <article class="card stat-card">
+          <p class="stat-label">Today</p>
+          <p id="todayCount" class="stat-value">0</p>
+        </article>
+        <article class="card stat-card">
+          <p class="stat-label">Overdue</p>
+          <p id="overdueCount" class="stat-value danger">0</p>
+        </article>
+        <article class="card stat-card">
+          <p class="stat-label">Upcoming</p>
+          <p id="upcomingCount" class="stat-value">0</p>
+        </article>
+      </section>
+
+      <section class="card list-wrap" aria-live="polite">
+        <div class="section-head">
+          <h2>Today list</h2>
+          <a class="text-link" href="tasks.html">Open all</a>
+        </div>
+        <div id="taskList" class="task-list"></div>
+        <p id="emptyState" class="empty-state">No tasks for today.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main">
+      <a class="nav-link active" href="index.html">Dashboard</a>
+      <a class="nav-link" href="tasks.html">Tasks</a>
+      <a class="nav-link" href="completed.html">Completed</a>
+    </nav>
+
+    <template id="taskItemTemplate">
+      <article class="task-item">
+        <div class="task-main">
+          <button class="check-btn" type="button" aria-label="Mark completed"></button>
+          <div class="task-copy">
+            <p class="task-title"></p>
+            <p class="task-meta"></p>
+          </div>
+        </div>
+        <button class="delete-btn" type="button" aria-label="Delete task">Delete</button>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>

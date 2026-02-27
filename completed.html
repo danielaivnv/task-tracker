@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Focus Tasks - Completed</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-page="completed">
+    <main class="app-shell">
+      <header class="topbar">
+        <p class="eyebrow">History</p>
+        <h1>Completed</h1>
+        <p class="subtitle">Your finished tasks are stored here.</p>
+      </header>
+
+      <section class="card list-wrap" aria-live="polite">
+        <div class="section-head">
+          <h2>Done list</h2>
+          <button id="clearCompletedBtn" class="ghost-btn" type="button">Clear all</button>
+        </div>
+        <div id="taskList" class="task-list"></div>
+        <p id="emptyState" class="empty-state">No completed tasks yet.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main">
+      <a class="nav-link" href="index.html">Dashboard</a>
+      <a class="nav-link" href="tasks.html">Tasks</a>
+      <a class="nav-link active" href="completed.html">Completed</a>
+    </nav>
+
+    <template id="taskItemTemplate">
+      <article class="task-item completed">
+        <div class="task-main">
+          <button class="check-btn" type="button" aria-label="Mark active"></button>
+          <div class="task-copy">
+            <p class="task-title"></p>
+            <p class="task-meta"></p>
+          </div>
+        </div>
+        <button class="delete-btn" type="button" aria-label="Delete task">Delete</button>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
