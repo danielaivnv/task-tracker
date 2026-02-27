@@ -1,22 +1,20 @@
 const STORAGE_KEY = "focus-tasks-v2";
 const THEME_KEY = "focus-theme-v1";
 const COLORS = [
-  { name: "Blue Pop", hex: "#2D52FF" },
-  { name: "Coral", hex: "#FF6F61" },
-  { name: "Sun", hex: "#F8C95F" },
-  { name: "Mint", hex: "#48A58D" },
-  { name: "Lilac", hex: "#D9AFE8" },
-  { name: "Navy", hex: "#0F2C5C" },
-  { name: "Leaf", hex: "#6D9958" },
-  { name: "Sky", hex: "#5BB8FF" }
+  { name: "Ocean", hex: "#2D52FF" },
+  { name: "Sunset", hex: "#FF7A3D" },
+  { name: "Sky", hex: "#55A9FF" },
+  { name: "Navy", hex: "#1A2E66" },
+  { name: "Amber", hex: "#F2B544" }
 ];
 const THEMES = [
-  { id: "paper-candy", label: "Candy" },
-  { id: "mint-pop", label: "Mint" },
-  { id: "neo-sky", label: "Sky" }
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" }
 ];
+const VISIBLE_COLOR_COUNT = 2;
 
 let selectedColor = COLORS[0].hex;
+let colorPickerExpanded = false;
 let activeFilter = "all";
 let tasks = loadTasks();
 
@@ -46,7 +44,7 @@ function setup() {
     renderColorPicker();
   }
 
-  if (els.themePicker) {
+  if (page === "dashboard" && els.themePicker) {
     renderThemePicker();
   }
 
@@ -129,6 +127,8 @@ function addTask() {
 }
 
 function renderColorPicker() {
+  els.colorPicker.innerHTML = "";
+
   COLORS.forEach((color, index) => {
     const button = document.createElement("button");
     button.type = "button";
@@ -136,17 +136,25 @@ function renderColorPicker() {
     button.style.background = color.hex;
     button.setAttribute("aria-label", color.name);
     button.setAttribute("role", "radio");
-    button.setAttribute("aria-checked", index === 0 ? "true" : "false");
+    button.setAttribute("aria-checked", "false");
 
-    if (index === 0) {
+    if (color.hex === selectedColor) {
       button.classList.add("selected");
+      button.setAttribute("aria-checked", "true");
+    }
+
+    const shouldHide = !colorPickerExpanded && index >= VISIBLE_COLOR_COUNT && color.hex !== selectedColor;
+    if (shouldHide) {
+      button.classList.add("hidden");
     }
 
     button.addEventListener("click", () => {
       selectedColor = color.hex;
       Array.from(els.colorPicker.children).forEach((node) => {
-        node.classList.remove("selected");
-        node.setAttribute("aria-checked", "false");
+        if (node.classList.contains("color-dot")) {
+          node.classList.remove("selected");
+          node.setAttribute("aria-checked", "false");
+        }
       });
       button.classList.add("selected");
       button.setAttribute("aria-checked", "true");
@@ -154,6 +162,21 @@ function renderColorPicker() {
 
     els.colorPicker.appendChild(button);
   });
+
+  if (COLORS.length > VISIBLE_COLOR_COUNT) {
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "color-more-btn";
+    toggleBtn.textContent = colorPickerExpanded ? "-" : "+";
+    toggleBtn.setAttribute("aria-label", colorPickerExpanded ? "Show fewer colors" : "Show more colors");
+
+    toggleBtn.addEventListener("click", () => {
+      colorPickerExpanded = !colorPickerExpanded;
+      renderColorPicker();
+    });
+
+    els.colorPicker.appendChild(toggleBtn);
+  }
 }
 
 function renderThemePicker() {
@@ -403,7 +426,8 @@ function saveTasks(value) {
 
 function initializeTheme() {
   const storedTheme = localStorage.getItem(THEME_KEY);
-  const fallback = THEMES[0].id;
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const fallback = prefersDark ? "dark" : "light";
   const validTheme = THEMES.some((theme) => theme.id === storedTheme) ? storedTheme : fallback;
   applyTheme(validTheme);
 }
