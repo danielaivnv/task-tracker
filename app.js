@@ -1,8 +1,6 @@
 const STORAGE_KEY = "focus-tasks-v2";
 const THEME_KEY = "focus-theme-v1";
 const TYPE_STORAGE_KEY = "focus-task-types-v1";
-const TASK_BACKUP_KEY = "focus-tasks-backup-v1";
-const TYPE_BACKUP_KEY = "focus-task-types-backup-v1";
 
 const TYPE_COLORS = ["#1F43B9", "#E85B0C", "#F1AD0A", "#2E8B57", "#EA7F82", "#5FA8C7"];
 const DEFAULT_TYPES = [
@@ -578,20 +576,9 @@ function syncDeadlineState() {
 function loadTypes() {
   try {
     const raw = localStorage.getItem(TYPE_STORAGE_KEY);
-    const backupRaw = localStorage.getItem(TYPE_BACKUP_KEY);
-
     if (!raw) {
-      if (backupRaw) {
-        const backupParsed = JSON.parse(backupRaw);
-        if (Array.isArray(backupParsed) && backupParsed.length) {
-          saveTypes(backupParsed);
-          return backupParsed;
-        }
-      }
-
-      const defaults = [...DEFAULT_TYPES];
-      saveTypes(defaults);
-      return defaults;
+      saveTypes(DEFAULT_TYPES);
+      return [...DEFAULT_TYPES];
     }
 
     const parsed = JSON.parse(raw);
@@ -614,13 +601,11 @@ function loadTypes() {
 
 function saveTypes(value) {
   localStorage.setItem(TYPE_STORAGE_KEY, JSON.stringify(value));
-  localStorage.setItem(TYPE_BACKUP_KEY, JSON.stringify(value));
 }
 
 function loadTasks() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("focus-tasks-v1");
-    const backupRaw = localStorage.getItem(TASK_BACKUP_KEY);
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
@@ -659,32 +644,14 @@ function loadTasks() {
 
     const sorted = sortByDeadline(migrated);
     saveTasks(sorted);
-
-    if (!sorted.length && backupRaw) {
-      const backupParsed = JSON.parse(backupRaw);
-      if (Array.isArray(backupParsed) && backupParsed.length) {
-        const repaired = sortByDeadline(backupParsed);
-        saveTasks(repaired);
-        return repaired;
-      }
-    }
-
     return sorted;
   } catch {
-    try {
-      const backupRaw = localStorage.getItem(TASK_BACKUP_KEY);
-      if (backupRaw) {
-        const backupParsed = JSON.parse(backupRaw);
-        if (Array.isArray(backupParsed)) return sortByDeadline(backupParsed);
-      }
-    } catch {}
     return [];
   }
 }
 
 function saveTasks(value) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-  localStorage.setItem(TASK_BACKUP_KEY, JSON.stringify(value));
 }
 
 function initializeTheme() {
