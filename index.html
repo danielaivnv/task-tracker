@@ -37,11 +37,21 @@
             </div>
           </div>
 
-          <div class="field color-field">
-            <label class="field-label" for="taskColor">Color</label>
-            <div id="taskColor" class="color-picker" role="radiogroup" aria-label="Task color"></div>
+          <div class="field">
+            <label class="field-label" for="taskTypeSelect">Type</label>
+            <select id="taskTypeSelect"></select>
           </div>
         </div>
+
+        <section class="type-builder" aria-label="Task types">
+          <p class="field-label">Create type</p>
+          <div class="type-create-grid">
+            <input id="newTypeName" type="text" maxlength="24" placeholder="Type name..." />
+            <div id="typeColorPicker" class="color-picker" role="radiogroup" aria-label="Type color"></div>
+          </div>
+          <button id="addTypeBtn" class="ghost-btn" type="button">Add type</button>
+          <div id="typeList" class="type-list"></div>
+        </section>
 
         <button id="addTaskBtn" class="primary-btn" type="button">Add task</button>
       </section>

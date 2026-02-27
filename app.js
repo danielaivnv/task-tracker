@@ -1,22 +1,23 @@
 const STORAGE_KEY = "focus-tasks-v2";
 const THEME_KEY = "focus-theme-v1";
-const COLORS = [
-  { name: "Azure", hex: "#3A6EF6" },
-  { name: "Sea", hex: "#3D93A3" },
-  { name: "Apricot", hex: "#EE9A53" },
-  { name: "Lavender", hex: "#8A78C9" },
-  { name: "Rosewood", hex: "#B56A6A" }
+const TYPE_STORAGE_KEY = "focus-task-types-v1";
+
+const TYPE_COLORS = ["#3A6EF6", "#3D93A3", "#EE9A53", "#8A78C9", "#B56A6A", "#4BBA84"];
+const DEFAULT_TYPES = [
+  { id: "type-personal", name: "Personal", color: "#3A6EF6" },
+  { id: "type-work", name: "Work", color: "#3D93A3" },
+  { id: "type-home", name: "Home", color: "#EE9A53" }
 ];
 const THEMES = [
   { id: "light", label: "Light" },
   { id: "dark", label: "Dark" }
 ];
-const VISIBLE_COLOR_COUNT = 2;
 
-let selectedColor = COLORS[0].hex;
-let colorPickerExpanded = false;
-let activeFilter = "all";
+let types = loadTypes();
 let tasks = loadTasks();
+let selectedTypeId = types[0] ? types[0].id : null;
+let selectedTypeColor = TYPE_COLORS[0];
+let activeFilter = "all";
 
 const page = document.body.dataset.page;
 const els = {
@@ -24,10 +25,14 @@ const els = {
   taskDate: document.getElementById("taskDate"),
   taskTime: document.getElementById("taskTime"),
   allDayToggle: document.getElementById("allDayToggle"),
+  taskTypeSelect: document.getElementById("taskTypeSelect"),
+  newTypeName: document.getElementById("newTypeName"),
+  typeColorPicker: document.getElementById("typeColorPicker"),
+  addTypeBtn: document.getElementById("addTypeBtn"),
+  typeList: document.getElementById("typeList"),
   addTaskBtn: document.getElementById("addTaskBtn"),
   taskList: document.getElementById("taskList"),
   emptyState: document.getElementById("emptyState"),
-  colorPicker: document.getElementById("taskColor"),
   themePicker: document.getElementById("themePicker"),
   filters: document.querySelectorAll(".filter-chip"),
   itemTemplate: document.getElementById("taskItemTemplate"),
@@ -42,12 +47,11 @@ setup();
 function setup() {
   initializeTheme();
 
-  if (els.colorPicker) {
-    renderColorPicker();
-  }
-
-  if (page === "dashboard" && els.themePicker) {
+  if (page === "dashboard") {
     renderThemePicker();
+    renderTaskTypeSelect();
+    renderTypeColorPicker();
+    renderTypeList();
   }
 
   bindEvents();
@@ -73,8 +77,25 @@ function bindEvents() {
 
   if (els.taskTitle) {
     els.taskTitle.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") addTask();
+    });
+  }
+
+  if (els.taskTypeSelect) {
+    els.taskTypeSelect.addEventListener("change", () => {
+      selectedTypeId = els.taskTypeSelect.value;
+    });
+  }
+
+  if (els.addTypeBtn) {
+    els.addTypeBtn.addEventListener("click", addType);
+  }
+
+  if (els.newTypeName) {
+    els.newTypeName.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
-        addTask();
+        event.preventDefault();
+        addType();
       }
     });
   }
@@ -107,6 +128,7 @@ function addTask() {
   const dateValue = els.taskDate ? els.taskDate.value : "";
   const isAllDay = els.allDayToggle ? els.allDayToggle.checked : true;
   const timeValue = els.taskTime ? els.taskTime.value : "";
+  const typeId = els.taskTypeSelect ? els.taskTypeSelect.value : selectedTypeId;
 
   if (!title) {
     els.taskTitle.focus();
@@ -119,13 +141,15 @@ function addTask() {
   }
 
   const dueAt = buildDueAt(dateValue, timeValue, isAllDay);
+  const color = getTypeColor(typeId);
 
   const newTask = {
     id: crypto.randomUUID(),
     title,
     dueAt,
     allDay: isAllDay,
-    color: selectedColor,
+    typeId,
+    color,
     completed: false,
     createdAt: Date.now()
   };
@@ -148,60 +172,149 @@ function addTask() {
   }
 }
 
-function renderColorPicker() {
-  els.colorPicker.innerHTML = "";
+function addType() {
+  if (!els.newTypeName) return;
 
-  COLORS.forEach((color, index) => {
+  const name = els.newTypeName.value.trim();
+  if (!name) {
+    els.newTypeName.focus();
+    return;
+  }
+
+  const exists = types.some((type) => type.name.toLowerCase() === name.toLowerCase());
+  if (exists) {
+    return;
+  }
+
+  const newType = {
+    id: `type-${crypto.randomUUID()}`,
+    name,
+    color: selectedTypeColor
+  };
+
+  types.push(newType);
+  saveTypes(types);
+  selectedTypeId = newType.id;
+
+  els.newTypeName.value = "";
+  renderTaskTypeSelect();
+  renderTypeList();
+}
+
+function deleteType(typeId) {
+  if (types.length <= 1) return;
+
+  const fallbackType = types.find((type) => type.id !== typeId);
+  types = types.filter((type) => type.id !== typeId);
+
+  tasks = tasks.map((task) => {
+    if (task.typeId !== typeId) return task;
+
+    return {
+      ...task,
+      typeId: fallbackType.id,
+      color: fallbackType.color
+    };
+  });
+
+  saveTypes(types);
+  saveTasks(tasks);
+
+  if (selectedTypeId === typeId) {
+    selectedTypeId = fallbackType.id;
+  }
+
+  renderTaskTypeSelect();
+  renderTypeList();
+  rerenderCurrentPage();
+}
+
+function renderTaskTypeSelect() {
+  if (!els.taskTypeSelect) return;
+
+  if (!types.length) {
+    types = [...DEFAULT_TYPES];
+    saveTypes(types);
+  }
+
+  if (!types.some((type) => type.id === selectedTypeId)) {
+    selectedTypeId = types[0].id;
+  }
+
+  els.taskTypeSelect.innerHTML = "";
+
+  types.forEach((type) => {
+    const option = document.createElement("option");
+    option.value = type.id;
+    option.textContent = type.name;
+    if (type.id === selectedTypeId) option.selected = true;
+    els.taskTypeSelect.appendChild(option);
+  });
+}
+
+function renderTypeColorPicker() {
+  if (!els.typeColorPicker) return;
+
+  els.typeColorPicker.innerHTML = "";
+
+  TYPE_COLORS.forEach((color, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "color-dot";
-    button.style.background = color.hex;
-    button.setAttribute("aria-label", color.name);
+    button.style.background = color;
     button.setAttribute("role", "radio");
-    button.setAttribute("aria-checked", "false");
+    button.setAttribute("aria-label", `Type color ${index + 1}`);
+    button.setAttribute("aria-checked", selectedTypeColor === color ? "true" : "false");
 
-    if (color.hex === selectedColor) {
-      button.classList.add("selected");
-      button.setAttribute("aria-checked", "true");
-    }
-
-    const shouldHide = !colorPickerExpanded && index >= VISIBLE_COLOR_COUNT && color.hex !== selectedColor;
-    if (shouldHide) {
-      button.classList.add("hidden");
-    }
+    if (selectedTypeColor === color) button.classList.add("selected");
 
     button.addEventListener("click", () => {
-      selectedColor = color.hex;
-      Array.from(els.colorPicker.children).forEach((node) => {
-        if (node.classList.contains("color-dot")) {
-          node.classList.remove("selected");
-          node.setAttribute("aria-checked", "false");
-        }
+      selectedTypeColor = color;
+      Array.from(els.typeColorPicker.children).forEach((node) => {
+        node.classList.remove("selected");
+        node.setAttribute("aria-checked", "false");
       });
       button.classList.add("selected");
       button.setAttribute("aria-checked", "true");
     });
 
-    els.colorPicker.appendChild(button);
+    els.typeColorPicker.appendChild(button);
   });
+}
 
-  if (COLORS.length > VISIBLE_COLOR_COUNT) {
-    const toggleBtn = document.createElement("button");
-    toggleBtn.type = "button";
-    toggleBtn.className = "color-more-btn";
-    toggleBtn.textContent = colorPickerExpanded ? "-" : "+";
-    toggleBtn.setAttribute("aria-label", colorPickerExpanded ? "Show fewer colors" : "Show more colors");
+function renderTypeList() {
+  if (!els.typeList) return;
 
-    toggleBtn.addEventListener("click", () => {
-      colorPickerExpanded = !colorPickerExpanded;
-      renderColorPicker();
-    });
+  els.typeList.innerHTML = "";
 
-    els.colorPicker.appendChild(toggleBtn);
-  }
+  types.forEach((type) => {
+    const pill = document.createElement("div");
+    pill.className = "type-pill";
+
+    const dot = document.createElement("span");
+    dot.className = "type-pill-dot";
+    dot.style.background = type.color;
+
+    const name = document.createElement("span");
+    name.textContent = type.name;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "x";
+    del.setAttribute("aria-label", `Delete type ${type.name}`);
+    del.disabled = types.length <= 1;
+    del.addEventListener("click", () => deleteType(type.id));
+
+    pill.appendChild(dot);
+    pill.appendChild(name);
+    pill.appendChild(del);
+    els.typeList.appendChild(pill);
+  });
 }
 
 function renderThemePicker() {
+  if (!els.themePicker) return;
+
   els.themePicker.innerHTML = "";
 
   THEMES.forEach((theme) => {
@@ -238,13 +351,11 @@ function renderTaskList(list) {
     const title = node.querySelector(".task-title");
     const meta = node.querySelector(".task-meta");
 
-    item.style.borderLeft = `7px solid ${task.color}`;
+    item.style.borderLeft = `7px solid ${getTaskColor(task)}`;
     title.textContent = task.title;
     meta.textContent = formatMeta(task);
 
-    if (task.completed) {
-      item.classList.add("completed");
-    }
+    if (task.completed) item.classList.add("completed");
 
     checkBtn.addEventListener("click", () => {
       task.completed = !task.completed;
@@ -312,8 +423,10 @@ function getFilteredTasks(list, filter) {
 }
 
 function formatMeta(task) {
+  const typeName = getTaskTypeName(task);
+
   if (!task.dueAt) {
-    return task.completed ? "No deadline · Completed" : "No deadline";
+    return task.completed ? `${typeName} · No deadline · Completed` : `${typeName} · No deadline`;
   }
 
   const due = new Date(task.dueAt);
@@ -331,8 +444,8 @@ function formatMeta(task) {
 
   if (task.completed) {
     return isAllDay
-      ? `Deadline ${prettyDate} · All day · Completed`
-      : `Deadline ${prettyDate}, ${prettyTime} · Completed`;
+      ? `${typeName} · ${prettyDate} · All day · Completed`
+      : `${typeName} · ${prettyDate}, ${prettyTime} · Completed`;
   }
 
   const now = Date.now();
@@ -340,19 +453,37 @@ function formatMeta(task) {
 
   if (dueTs < now) {
     return isAllDay
-      ? `Deadline ${prettyDate} · All day · Overdue`
-      : `Deadline ${prettyDate}, ${prettyTime} · Overdue`;
+      ? `${typeName} · ${prettyDate} · All day · Overdue`
+      : `${typeName} · ${prettyDate}, ${prettyTime} · Overdue`;
   }
 
   if (isToday(task.dueAt) && !isAllDay) {
     const mins = Math.max(0, Math.round((dueTs - now) / 60000));
-    if (mins <= 1) return `Deadline ${prettyDate}, ${prettyTime} · Due now`;
-    return `Deadline ${prettyDate}, ${prettyTime} · In ${mins} min`;
+    if (mins <= 1) return `${typeName} · ${prettyDate}, ${prettyTime} · Due now`;
+    return `${typeName} · ${prettyDate}, ${prettyTime} · In ${mins} min`;
   }
 
   return isAllDay
-    ? `Deadline ${prettyDate} · All day`
-    : `Deadline ${prettyDate}, ${prettyTime}`;
+    ? `${typeName} · ${prettyDate} · All day`
+    : `${typeName} · ${prettyDate}, ${prettyTime}`;
+}
+
+function getTaskTypeName(task) {
+  const type = types.find((entry) => entry.id === task.typeId);
+  return type ? type.name : "General";
+}
+
+function getTypeColor(typeId) {
+  const type = types.find((entry) => entry.id === typeId);
+  return type ? type.color : TYPE_COLORS[0];
+}
+
+function getTaskColor(task) {
+  if (task.typeId) {
+    return getTypeColor(task.typeId);
+  }
+
+  return task.color || TYPE_COLORS[0];
 }
 
 function sortByDeadline(list) {
@@ -408,6 +539,36 @@ function syncAllDayState() {
   }
 }
 
+function loadTypes() {
+  try {
+    const raw = localStorage.getItem(TYPE_STORAGE_KEY);
+    if (!raw) {
+      saveTypes(DEFAULT_TYPES);
+      return [...DEFAULT_TYPES];
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.length) {
+      saveTypes(DEFAULT_TYPES);
+      return [...DEFAULT_TYPES];
+    }
+
+    const valid = parsed.filter((item) => item && item.id && item.name && item.color);
+    if (!valid.length) {
+      saveTypes(DEFAULT_TYPES);
+      return [...DEFAULT_TYPES];
+    }
+
+    return valid;
+  } catch {
+    return [...DEFAULT_TYPES];
+  }
+}
+
+function saveTypes(value) {
+  localStorage.setItem(TYPE_STORAGE_KEY, JSON.stringify(value));
+}
+
 function loadTasks() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("focus-tasks-v1");
@@ -416,11 +577,15 @@ function loadTasks() {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
 
+    const fallbackTypeId = types[0] ? types[0].id : DEFAULT_TYPES[0].id;
+
     const migrated = parsed.map((task) => {
       if (task.dueAt) {
         return {
           ...task,
-          allDay: typeof task.allDay === "boolean" ? task.allDay : task.dueAt.endsWith("23:59")
+          allDay: typeof task.allDay === "boolean" ? task.allDay : task.dueAt.endsWith("23:59"),
+          typeId: task.typeId || fallbackTypeId,
+          color: task.color || getTypeColor(task.typeId || fallbackTypeId)
         };
       }
 
@@ -428,14 +593,18 @@ function loadTasks() {
         return {
           ...task,
           dueAt: `${task.dueDate}T23:59`,
-          allDay: true
+          allDay: true,
+          typeId: task.typeId || fallbackTypeId,
+          color: task.color || getTypeColor(task.typeId || fallbackTypeId)
         };
       }
 
       return {
         ...task,
         dueAt: null,
-        allDay: true
+        allDay: true,
+        typeId: task.typeId || fallbackTypeId,
+        color: task.color || getTypeColor(task.typeId || fallbackTypeId)
       };
     });
 
