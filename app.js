@@ -1,10 +1,19 @@
 const STORAGE_KEY = "focus-tasks-v2";
+const THEME_KEY = "focus-theme-v1";
 const COLORS = [
-  { name: "Blue", hex: "#4A90E2" },
-  { name: "Green", hex: "#4CAF7D" },
-  { name: "Coral", hex: "#F27E72" },
-  { name: "Amber", hex: "#E9B44C" },
-  { name: "Violet", hex: "#8B8ACD" }
+  { name: "Blue Pop", hex: "#2D52FF" },
+  { name: "Coral", hex: "#FF6F61" },
+  { name: "Sun", hex: "#F8C95F" },
+  { name: "Mint", hex: "#48A58D" },
+  { name: "Lilac", hex: "#D9AFE8" },
+  { name: "Navy", hex: "#0F2C5C" },
+  { name: "Leaf", hex: "#6D9958" },
+  { name: "Sky", hex: "#5BB8FF" }
+];
+const THEMES = [
+  { id: "paper-candy", label: "Candy" },
+  { id: "mint-pop", label: "Mint" },
+  { id: "neo-sky", label: "Sky" }
 ];
 
 let selectedColor = COLORS[0].hex;
@@ -19,6 +28,7 @@ const els = {
   taskList: document.getElementById("taskList"),
   emptyState: document.getElementById("emptyState"),
   colorPicker: document.getElementById("taskColor"),
+  themePicker: document.getElementById("themePicker"),
   filters: document.querySelectorAll(".filter-chip"),
   itemTemplate: document.getElementById("taskItemTemplate"),
   clearCompletedBtn: document.getElementById("clearCompletedBtn"),
@@ -30,8 +40,14 @@ const els = {
 setup();
 
 function setup() {
+  initializeTheme();
+
   if (els.colorPicker) {
     renderColorPicker();
+  }
+
+  if (els.themePicker) {
+    renderThemePicker();
   }
 
   bindEvents();
@@ -137,6 +153,32 @@ function renderColorPicker() {
     });
 
     els.colorPicker.appendChild(button);
+  });
+}
+
+function renderThemePicker() {
+  els.themePicker.innerHTML = "";
+
+  THEMES.forEach((theme) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "theme-pill";
+    button.textContent = theme.label;
+    button.dataset.theme = theme.id;
+
+    if (document.body.dataset.theme === theme.id) {
+      button.classList.add("active");
+    }
+
+    button.addEventListener("click", () => {
+      applyTheme(theme.id);
+      saveTheme(theme.id);
+
+      Array.from(els.themePicker.children).forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+    });
+
+    els.themePicker.appendChild(button);
   });
 }
 
@@ -357,4 +399,19 @@ function loadTasks() {
 
 function saveTasks(value) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+function initializeTheme() {
+  const storedTheme = localStorage.getItem(THEME_KEY);
+  const fallback = THEMES[0].id;
+  const validTheme = THEMES.some((theme) => theme.id === storedTheme) ? storedTheme : fallback;
+  applyTheme(validTheme);
+}
+
+function applyTheme(themeId) {
+  document.body.dataset.theme = themeId;
+}
+
+function saveTheme(themeId) {
+  localStorage.setItem(THEME_KEY, themeId);
 }
