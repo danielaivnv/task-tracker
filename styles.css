@@ -208,7 +208,7 @@ input:focus {
 
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px;
+  grid-template-columns: 1fr;
   gap: 10px;
   margin-top: 10px;
 }
@@ -222,9 +222,7 @@ input:focus {
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
+  flex-wrap: wrap;
 }
 
 .color-picker::-webkit-scrollbar {
@@ -475,10 +473,6 @@ body[data-theme="dark"] .primary-btn {
 }
 
 @media (max-width: 370px) {
-  .row {
-    grid-template-columns: 1fr;
-  }
-
   .stats-grid {
     grid-template-columns: 1fr;
   }
