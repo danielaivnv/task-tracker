@@ -209,7 +209,6 @@ function renderThemePicker() {
     button.type = "button";
     button.className = "theme-pill";
     button.textContent = theme.label;
-    button.dataset.theme = theme.id;
 
     if (document.body.dataset.theme === theme.id) {
       button.classList.add("active");
@@ -218,7 +217,6 @@ function renderThemePicker() {
     button.addEventListener("click", () => {
       applyTheme(theme.id);
       saveTheme(theme.id);
-
       Array.from(els.themePicker.children).forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
     });
@@ -228,9 +226,7 @@ function renderThemePicker() {
 }
 
 function renderTaskList(list) {
-  if (!els.taskList || !els.itemTemplate) {
-    return;
-  }
+  if (!els.taskList || !els.itemTemplate) return;
 
   els.taskList.innerHTML = "";
 
@@ -288,9 +284,7 @@ function rerenderCurrentPage() {
 }
 
 function renderStats() {
-  if (!els.todayCount || !els.overdueCount || !els.upcomingCount) {
-    return;
-  }
+  if (!els.todayCount || !els.overdueCount || !els.upcomingCount) return;
 
   els.todayCount.textContent = getFilteredTasks(tasks, "today").length;
   els.overdueCount.textContent = getFilteredTasks(tasks, "overdue").length;
@@ -305,29 +299,12 @@ function getFilteredTasks(list, filter) {
       const dueTs = toTimestamp(task.dueAt);
       const isDone = Boolean(task.completed);
 
-      if (filter === "completed") {
-        return isDone;
-      }
-
-      if (isDone) {
-        return false;
-      }
-
-      if (filter === "all") {
-        return true;
-      }
-
-      if (filter === "today") {
-        return isToday(task.dueAt);
-      }
-
-      if (filter === "upcoming") {
-        return dueTs && dueTs > now && !isToday(task.dueAt);
-      }
-
-      if (filter === "overdue") {
-        return dueTs && dueTs < now;
-      }
+      if (filter === "completed") return isDone;
+      if (isDone) return false;
+      if (filter === "all") return true;
+      if (filter === "today") return isToday(task.dueAt);
+      if (filter === "upcoming") return dueTs && dueTs > now && !isToday(task.dueAt);
+      if (filter === "overdue") return dueTs && dueTs < now;
 
       return true;
     })
@@ -340,40 +317,42 @@ function formatMeta(task) {
   }
 
   const due = new Date(task.dueAt);
-  const pretty = new Intl.DateTimeFormat("en-US", {
+  const prettyDate = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric"
   }).format(due);
-
   const prettyTime = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit"
   }).format(due);
-  const showAllDay = task.allDay !== false;
+
+  const isAllDay = task.allDay !== false;
 
   if (task.completed) {
-    if (showAllDay) return `Deadline ${pretty} · All day · Completed`;
-    return `Deadline ${pretty}, ${prettyTime} · Completed`;
+    return isAllDay
+      ? `Deadline ${prettyDate} · All day · Completed`
+      : `Deadline ${prettyDate}, ${prettyTime} · Completed`;
   }
 
   const now = Date.now();
   const dueTs = due.getTime();
 
   if (dueTs < now) {
-    if (showAllDay) return `Deadline ${pretty} · All day · Overdue`;
-    return `Deadline ${pretty}, ${prettyTime} · Overdue`;
+    return isAllDay
+      ? `Deadline ${prettyDate} · All day · Overdue`
+      : `Deadline ${prettyDate}, ${prettyTime} · Overdue`;
   }
 
-  if (isToday(task.dueAt)) {
-    if (showAllDay) return `Deadline ${pretty} · All day`;
+  if (isToday(task.dueAt) && !isAllDay) {
     const mins = Math.max(0, Math.round((dueTs - now) / 60000));
-    if (mins <= 1) return `Deadline ${pretty} · Due now`;
-    return `Deadline ${pretty}, ${prettyTime} · In ${mins} min`;
+    if (mins <= 1) return `Deadline ${prettyDate}, ${prettyTime} · Due now`;
+    return `Deadline ${prettyDate}, ${prettyTime} · In ${mins} min`;
   }
 
-  if (showAllDay) return `Deadline ${pretty} · All day`;
-  return `Deadline ${pretty}, ${prettyTime}`;
+  return isAllDay
+    ? `Deadline ${prettyDate} · All day`
+    : `Deadline ${prettyDate}, ${prettyTime}`;
 }
 
 function sortByDeadline(list) {
@@ -390,6 +369,14 @@ function sortByDeadline(list) {
   });
 }
 
+function buildDueAt(dateValue, timeValue, isAllDay) {
+  if (!dateValue) return null;
+
+  const raw = isAllDay ? `${dateValue}T23:59` : `${dateValue}T${timeValue}`;
+  const ts = new Date(raw).getTime();
+  return Number.isNaN(ts) ? null : raw;
+}
+
 function toTimestamp(dueAt) {
   if (!dueAt) return null;
   const ts = new Date(dueAt).getTime();
@@ -398,6 +385,7 @@ function toTimestamp(dueAt) {
 
 function isToday(dueAt) {
   if (!dueAt) return false;
+
   const date = new Date(dueAt);
   if (Number.isNaN(date.getTime())) return false;
 
@@ -409,20 +397,13 @@ function isToday(dueAt) {
   );
 }
 
-function buildDueAt(dateValue, timeValue, isAllDay) {
-  if (!dateValue) return null;
-
-  const dueAt = isAllDay ? `${dateValue}T23:59` : `${dateValue}T${timeValue}`;
-  const ts = new Date(dueAt).getTime();
-  return Number.isNaN(ts) ? null : dueAt;
-}
-
 function syncAllDayState() {
   if (!els.allDayToggle || !els.taskTime) return;
 
-  const disabled = els.allDayToggle.checked;
-  els.taskTime.disabled = disabled;
-  if (disabled) {
+  const isAllDay = els.allDayToggle.checked;
+  els.taskTime.disabled = isAllDay;
+  els.taskTime.classList.toggle("hidden", isAllDay);
+  if (isAllDay) {
     els.taskTime.value = "";
   }
 }
@@ -471,11 +452,11 @@ function saveTasks(value) {
 }
 
 function initializeTheme() {
-  const storedTheme = localStorage.getItem(THEME_KEY);
+  const saved = localStorage.getItem(THEME_KEY);
   const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   const fallback = prefersDark ? "dark" : "light";
-  const validTheme = THEMES.some((theme) => theme.id === storedTheme) ? storedTheme : fallback;
-  applyTheme(validTheme);
+  const theme = THEMES.some((item) => item.id === saved) ? saved : fallback;
+  applyTheme(theme);
 }
 
 function applyTheme(themeId) {

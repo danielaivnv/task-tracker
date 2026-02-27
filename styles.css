@@ -4,7 +4,7 @@
   --shape-a: #dfe9ff;
   --shape-b: #ffdcb2;
   --shape-c: #a8c3ff;
-  --surface: rgba(255, 255, 255, 0.9);
+  --surface: rgba(255, 255, 255, 0.92);
   --surface-soft: #f2f6ff;
   --text: #1b315d;
   --muted: #667b9d;
@@ -13,9 +13,9 @@
   --danger: #d35f5f;
   --border: #d3deef;
   --ok: #31a66a;
-  --nav-bg: rgba(255, 255, 255, 0.92);
+  --nav-bg: rgba(255, 255, 255, 0.94);
   --chip-bg: #ffffff;
-  --task-bg: rgba(255, 255, 255, 0.95);
+  --task-bg: rgba(255, 255, 255, 0.97);
   --control-bg: #ffffff;
   --danger-soft: #ffeae6;
   --shadow: 0 12px 30px rgba(43, 65, 106, 0.11);
@@ -27,7 +27,7 @@ body[data-theme="dark"] {
   --shape-a: #24395f;
   --shape-b: #2d4f7e;
   --shape-c: #f3a75a;
-  --surface: rgba(21, 33, 56, 0.9);
+  --surface: rgba(21, 33, 56, 0.92);
   --surface-soft: #182949;
   --text: #e8eefc;
   --muted: #a4b4d3;
@@ -36,9 +36,9 @@ body[data-theme="dark"] {
   --danger: #ff8b80;
   --border: #335079;
   --ok: #4bc58e;
-  --nav-bg: rgba(13, 22, 38, 0.95);
+  --nav-bg: rgba(13, 22, 38, 0.96);
   --chip-bg: #192b4a;
-  --task-bg: rgba(22, 36, 60, 0.96);
+  --task-bg: rgba(22, 36, 60, 0.98);
   --control-bg: #14243f;
   --danger-soft: #442933;
   --shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
@@ -168,11 +168,11 @@ body::after {
 
 .card {
   border: 1px solid var(--border);
-  border-radius: 24px 14px 24px 14px;
+  border-radius: 18px;
   background: var(--surface);
-  backdrop-filter: blur(10px);
   box-shadow: var(--shadow);
   padding: 14px;
+  overflow: hidden;
 }
 
 .composer h2,
@@ -185,14 +185,18 @@ body::after {
   display: block;
   margin: 0 0 6px;
   color: var(--muted);
-  font-size: 0.79rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
 input[type="text"],
 input[type="date"],
 input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--border);
   background: var(--surface-soft);
   color: var(--text);
@@ -221,10 +225,11 @@ input:focus {
 }
 
 .deadline-mode-row {
-  display: grid;
-  grid-template-columns: 1fr minmax(0, 112px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
-  align-items: center;
+  width: 100%;
 }
 
 .switch-line {
@@ -242,7 +247,15 @@ input:focus {
   accent-color: var(--accent);
 }
 
-input[type="time"]:disabled {
+.time-input {
+  width: min(180px, 100%);
+}
+
+.time-input.hidden {
+  display: none;
+}
+
+.time-input:disabled {
   opacity: 0.55;
 }
 
@@ -253,13 +266,9 @@ input[type="time"]:disabled {
 .color-picker {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   min-height: 44px;
-  flex-wrap: wrap;
-}
-
-.color-picker::-webkit-scrollbar {
-  display: none;
 }
 
 .color-dot {
@@ -294,7 +303,7 @@ input[type="time"]:disabled {
 .primary-btn,
 .ghost-btn {
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
   min-height: 44px;
   font-weight: 700;
 }
@@ -302,7 +311,7 @@ input[type="time"]:disabled {
 .primary-btn {
   width: 100%;
   margin-top: 12px;
-  color: #ffffff;
+  color: #fff;
   background: linear-gradient(135deg, var(--accent), #6d8ce8);
 }
 
@@ -312,7 +321,7 @@ body[data-theme="dark"] .primary-btn {
 }
 
 .primary-btn:active {
-  transform: translateY(1px);
+  filter: brightness(0.95);
 }
 
 .ghost-btn {
@@ -324,13 +333,12 @@ body[data-theme="dark"] .primary-btn {
 .stats-grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .stat-card {
   padding: 10px;
-  border-radius: 18px 12px 18px 12px;
 }
 
 .stat-label {
@@ -367,7 +375,7 @@ body[data-theme="dark"] .primary-btn {
   background: var(--chip-bg);
   padding: 8px 13px;
   color: var(--text);
-  font-weight: 700;
+  font-weight: 650;
   min-height: 38px;
   white-space: nowrap;
 }
@@ -406,7 +414,7 @@ body[data-theme="dark"] .primary-btn {
 
 .task-item {
   border: 1px solid var(--border);
-  border-radius: 12px 20px 12px 20px;
+  border-radius: 14px;
   background: var(--task-bg);
   padding: 10px;
   display: flex;
@@ -480,7 +488,7 @@ body[data-theme="dark"] .primary-btn {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
   width: min(430px, calc(100% - 20px));
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   background: var(--nav-bg);
   border: 1px solid var(--border);
