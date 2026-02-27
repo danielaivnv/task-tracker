@@ -350,37 +350,9 @@ select:focus {
   padding: 10px;
 }
 
-.hidden {
-  display: none !important;
-}
-
 .type-create-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.type-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.type-toggle-btn {
-  border: 1px solid var(--border);
-  background: var(--chip-bg);
-  color: var(--accent);
-  border-radius: 999px;
-  padding: 6px 10px;
-  min-height: 30px;
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.type-selector {
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -399,33 +371,25 @@ select:focus {
   border-radius: 999px;
   background: var(--chip-bg);
   color: var(--text);
-  padding: 8px 12px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  cursor: pointer;
-  user-select: none;
-}
-
-.type-pill.active {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .type-pill-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
 }
 
-.type-pill-delete {
+.type-pill button {
   border: none;
   background: transparent;
   color: var(--muted);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.86rem;
   line-height: 1;
   padding: 0;
-  margin-left: 2px;
 }
 
 .primary-btn,

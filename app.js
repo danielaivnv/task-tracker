@@ -28,9 +28,7 @@ const els = {
   taskDate: document.getElementById("taskDate"),
   taskTime: document.getElementById("taskTime"),
   allDayToggle: document.getElementById("allDayToggle"),
-  typeSelector: document.getElementById("typeSelector"),
-  toggleTypeBuilderBtn: document.getElementById("toggleTypeBuilderBtn"),
-  typeBuilder: document.getElementById("typeBuilder"),
+  taskTypeSelect: document.getElementById("taskTypeSelect"),
   newTypeName: document.getElementById("newTypeName"),
   typeColorPicker: document.getElementById("typeColorPicker"),
   addTypeBtn: document.getElementById("addTypeBtn"),
@@ -51,11 +49,10 @@ setup();
 
 function setup() {
   initializeTheme();
-  setTodayAsDefault();
 
   if (page === "dashboard") {
     renderThemePicker();
-    renderTypeSelector();
+    renderTaskTypeSelect();
     renderTypeColorPicker();
     renderTypeList();
   }
@@ -87,16 +84,14 @@ function bindEvents() {
     });
   }
 
-  if (els.addTypeBtn) {
-    els.addTypeBtn.addEventListener("click", addType);
+  if (els.taskTypeSelect) {
+    els.taskTypeSelect.addEventListener("change", () => {
+      selectedTypeId = els.taskTypeSelect.value;
+    });
   }
 
-  if (els.toggleTypeBuilderBtn && els.typeBuilder) {
-    els.toggleTypeBuilderBtn.addEventListener("click", () => {
-      els.typeBuilder.classList.toggle("hidden");
-      const opened = !els.typeBuilder.classList.contains("hidden");
-      els.toggleTypeBuilderBtn.textContent = opened ? "Hide type editor" : "+ New type";
-    });
+  if (els.addTypeBtn) {
+    els.addTypeBtn.addEventListener("click", addType);
   }
 
   if (els.newTypeName) {
@@ -136,7 +131,7 @@ function addTask() {
   const dateValue = els.taskDate ? els.taskDate.value : "";
   const isAllDay = els.allDayToggle ? els.allDayToggle.checked : true;
   const timeValue = els.taskTime ? els.taskTime.value : "";
-  const typeId = selectedTypeId;
+  const typeId = els.taskTypeSelect ? els.taskTypeSelect.value : selectedTypeId;
 
   if (!title) {
     els.taskTitle.focus();
@@ -167,7 +162,7 @@ function addTask() {
   saveTasks(tasks);
 
   els.taskTitle.value = "";
-  if (els.taskDate) els.taskDate.value = getTodayDateString();
+  if (els.taskDate) els.taskDate.value = "";
   if (els.taskTime) els.taskTime.value = "";
   if (els.allDayToggle) {
     els.allDayToggle.checked = true;
@@ -205,7 +200,7 @@ function addType() {
   selectedTypeId = newType.id;
 
   els.newTypeName.value = "";
-  renderTypeSelector();
+  renderTaskTypeSelect();
   renderTypeList();
 }
 
@@ -232,13 +227,13 @@ function deleteType(typeId) {
     selectedTypeId = fallbackType.id;
   }
 
-  renderTypeSelector();
+  renderTaskTypeSelect();
   renderTypeList();
   rerenderCurrentPage();
 }
 
-function renderTypeSelector() {
-  if (!els.typeSelector) return;
+function renderTaskTypeSelect() {
+  if (!els.taskTypeSelect) return;
 
   if (!types.length) {
     types = [...DEFAULT_TYPES];
@@ -249,11 +244,14 @@ function renderTypeSelector() {
     selectedTypeId = types[0].id;
   }
 
-  els.typeSelector.innerHTML = "";
+  els.taskTypeSelect.innerHTML = "";
 
   types.forEach((type) => {
-    const chip = createTypeChip(type, true);
-    els.typeSelector.appendChild(chip);
+    const option = document.createElement("option");
+    option.value = type.id;
+    option.textContent = type.name;
+    if (type.id === selectedTypeId) option.selected = true;
+    els.taskTypeSelect.appendChild(option);
   });
 }
 
@@ -293,56 +291,28 @@ function renderTypeList() {
   els.typeList.innerHTML = "";
 
   types.forEach((type) => {
-    const pill = createTypeChip(type, false);
+    const pill = document.createElement("div");
+    pill.className = "type-pill";
+
+    const dot = document.createElement("span");
+    dot.className = "type-pill-dot";
+    dot.style.background = type.color;
+
+    const name = document.createElement("span");
+    name.textContent = type.name;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "x";
+    del.setAttribute("aria-label", `Delete type ${type.name}`);
+    del.disabled = types.length <= 1;
+    del.addEventListener("click", () => deleteType(type.id));
+
+    pill.appendChild(dot);
+    pill.appendChild(name);
+    pill.appendChild(del);
     els.typeList.appendChild(pill);
   });
-}
-
-function createTypeChip(type, isSelectable) {
-  const pill = document.createElement("div");
-  pill.className = "type-pill";
-  if (selectedTypeId === type.id) {
-    pill.classList.add("active");
-  }
-
-  const dot = document.createElement("span");
-  dot.className = "type-pill-dot";
-  dot.style.background = type.color;
-
-  const name = document.createElement("span");
-  name.textContent = type.name;
-
-  const del = document.createElement("button");
-  del.type = "button";
-  del.className = "type-pill-delete";
-  del.textContent = "x";
-  del.setAttribute("aria-label", `Delete type ${type.name}`);
-  del.disabled = types.length <= 1;
-  del.addEventListener("click", (event) => {
-    event.stopPropagation();
-    deleteType(type.id);
-  });
-
-  if (isSelectable) {
-    pill.setAttribute("role", "button");
-    pill.setAttribute("tabindex", "0");
-    pill.addEventListener("click", () => {
-      selectedTypeId = type.id;
-      renderTypeSelector();
-    });
-    pill.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        selectedTypeId = type.id;
-        renderTypeSelector();
-      }
-    });
-  }
-
-  pill.appendChild(dot);
-  pill.appendChild(name);
-  pill.appendChild(del);
-  return pill;
 }
 
 function renderThemePicker() {
@@ -667,21 +637,6 @@ function applyTheme(themeId) {
 
 function saveTheme(themeId) {
   localStorage.setItem(THEME_KEY, themeId);
-}
-
-function setTodayAsDefault() {
-  if (!els.taskDate) return;
-  if (!els.taskDate.value) {
-    els.taskDate.value = getTodayDateString();
-  }
-}
-
-function getTodayDateString() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
 }
 
 function normalizeStandalonePath() {
