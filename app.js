@@ -13,6 +13,9 @@ const THEMES = [
   { id: "dark", label: "Dark" }
 ];
 
+normalizeStandalonePath();
+fixBottomNavLinks();
+
 let types = loadTypes();
 let tasks = loadTasks();
 let selectedTypeId = types[0] ? types[0].id : null;
@@ -634,4 +637,40 @@ function applyTheme(themeId) {
 
 function saveTheme(themeId) {
   localStorage.setItem(THEME_KEY, themeId);
+}
+
+function normalizeStandalonePath() {
+  const { hostname, pathname, search, hash } = window.location;
+
+  // GitHub Pages project route without trailing slash can break relative links.
+  if (!hostname.endsWith("github.io")) return;
+  if (pathname.endsWith("/") || pathname.endsWith(".html")) return;
+
+  window.location.replace(`${pathname}/${search}${hash}`);
+}
+
+function fixBottomNavLinks() {
+  const links = document.querySelectorAll(".nav-link");
+  if (!links.length) return;
+
+  const root = getAppRoot();
+
+  links.forEach((link) => {
+    const href = link.getAttribute("href");
+    if (!href || href.startsWith("http")) return;
+
+    const file = href.split("/").pop();
+    link.setAttribute("href", `${root}${file}`);
+  });
+}
+
+function getAppRoot() {
+  const { hostname, pathname } = window.location;
+
+  if (!hostname.endsWith("github.io")) return "/";
+
+  const parts = pathname.split("/").filter(Boolean);
+  if (!parts.length) return "/";
+
+  return `/${parts[0]}/`;
 }
