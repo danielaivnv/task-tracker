@@ -24,7 +24,7 @@
 
         <div class="row">
           <div class="field">
-            <label class="field-label" for="taskDate">Deadline</label>
+            <label class="field-label" for="taskDate">Today</label>
             <div class="deadline-controls">
               <input id="taskDate" type="date" />
               <div class="deadline-mode-row">
@@ -38,12 +38,15 @@
           </div>
 
           <div class="field">
-            <label class="field-label" for="taskTypeSelect">Type</label>
-            <select id="taskTypeSelect"></select>
+            <div class="type-head">
+              <label class="field-label">Type</label>
+              <button id="toggleTypeBuilderBtn" class="type-toggle-btn" type="button">+ New type</button>
+            </div>
+            <div id="typeSelector" class="type-selector" aria-label="Select task type"></div>
           </div>
         </div>
 
-        <section class="type-builder" aria-label="Task types">
+        <section id="typeBuilder" class="type-builder hidden" aria-label="Task types">
           <p class="field-label">Create type</p>
           <div class="type-create-grid">
             <input id="newTypeName" type="text" maxlength="24" placeholder="Type name..." />
