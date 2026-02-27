@@ -297,11 +297,8 @@ function renderTypeList() {
 
   els.typeList.innerHTML = "";
   types.forEach((type) => {
-    const row = document.createElement("div");
-    row.className = "type-list-row";
-
-    const left = document.createElement("div");
-    left.className = "type-list-left";
+    const pill = document.createElement("div");
+    pill.className = "type-pill";
 
     const dot = document.createElement("span");
     dot.className = "type-pill-dot";
@@ -313,15 +310,15 @@ function renderTypeList() {
     const del = document.createElement("button");
     del.type = "button";
     del.className = "type-pill-delete";
-    del.textContent = "Delete";
+    del.textContent = "x";
+    del.setAttribute("aria-label", `Delete type ${type.name}`);
     del.disabled = types.length <= 1;
     del.addEventListener("click", () => deleteType(type.id));
 
-    left.appendChild(dot);
-    left.appendChild(name);
-    row.appendChild(left);
-    row.appendChild(del);
-    els.typeList.appendChild(row);
+    pill.appendChild(dot);
+    pill.appendChild(name);
+    pill.appendChild(del);
+    els.typeList.appendChild(pill);
   });
 }
 

@@ -364,28 +364,22 @@ select:focus {
 
 .type-list {
   margin-top: 10px;
-  display: grid;
-  gap: 8px;
-}
-
-.type-list-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--chip-bg);
-  padding: 8px 10px;
 }
 
-.type-list-left {
+.type-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  padding: 8px 12px;
   color: var(--text);
-  font-size: 0.88rem;
-  font-weight: 650;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .type-pill-dot {
@@ -395,14 +389,14 @@ select:focus {
 }
 
 .type-pill-delete {
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
-  color: var(--text);
+  border: none;
+  background: transparent;
+  color: var(--muted);
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 1.05rem;
   line-height: 1;
-  border-radius: 999px;
-  padding: 6px 8px;
+  padding: 0;
+  margin-left: 2px;
 }
 
 .primary-btn,
