@@ -32,7 +32,6 @@ const els = {
   allDayToggle: document.getElementById("allDayToggle"),
   noDeadlineToggle: document.getElementById("noDeadlineToggle"),
   typeSelector: document.getElementById("typeSelector"),
-  toggleTypeBuilderBtn: document.getElementById("toggleTypeBuilderBtn"),
   typeBuilder: document.getElementById("typeBuilder"),
   newTypeName: document.getElementById("newTypeName"),
   typeColorPicker: document.getElementById("typeColorPicker"),
@@ -100,14 +99,6 @@ function bindEvents() {
         event.preventDefault();
         addType();
       }
-    });
-  }
-
-  if (els.toggleTypeBuilderBtn && els.typeBuilder) {
-    els.toggleTypeBuilderBtn.addEventListener("click", () => {
-      els.typeBuilder.classList.toggle("hidden");
-      const opened = !els.typeBuilder.classList.contains("hidden");
-      els.toggleTypeBuilderBtn.textContent = opened ? "Hide type editor" : "+ New type";
     });
   }
 
