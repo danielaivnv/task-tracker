@@ -126,15 +126,15 @@ body::after {
 }
 
 .topbar::after {
-  content: ":)";
+  content: "";
   position: absolute;
   right: 8px;
-  top: 34px;
-  color: var(--shape-c);
-  font-size: 1.55rem;
-  font-weight: 800;
-  line-height: 1;
-  opacity: 0.9;
+  top: 40px;
+  width: 56px;
+  height: 18px;
+  background: var(--shape-c);
+  border-radius: 28px 28px 10px 10px;
+  opacity: 0.75;
 }
 
 .topbar h1 {
